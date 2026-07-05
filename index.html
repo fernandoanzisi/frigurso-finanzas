@@ -130,24 +130,45 @@
   <div class="auth-title">Frigurso Finanzas</div>
   <div class="auth-sub" id="auth-sub">Cargando...</div>
 
-  <!-- Crear cuenta -->
+  <!-- Selector de perfil -->
+  <div id="auth-selector" style="display:none">
+    <div id="selector-perfiles-lista" style="display:flex;flex-direction:column;gap:10px;margin-bottom:16px"></div>
+    <button class="btn-ghost" onclick="mostrarCrearPerfil()">+ Nuevo perfil</button>
+  </div>
+
+  <!-- Crear cuenta / nuevo perfil -->
   <div id="auth-crear" style="display:none">
     <div class="field-wrap"><div class="field-label">Nombre</div><input type="text" class="input" id="ac-nombre" placeholder="Tu nombre"></div>
     <div class="field-wrap"><div class="field-label">Email</div><input type="email" class="input" id="ac-email" placeholder="tu@email.com"></div>
     <div class="field-wrap"><div class="field-label">Contraseña</div><input type="password" class="input" id="ac-pass" placeholder="Mínimo 6 caracteres" autocomplete="new-password"></div>
     <div class="field-wrap"><div class="field-label">Repetir contraseña</div><input type="password" class="input" id="ac-pass2" placeholder="Repetí la contraseña" autocomplete="new-password"></div>
     <div class="auth-err" id="ac-err"></div>
-    <button class="btn-primary" onclick="crearCuenta()">Crear mi cuenta</button>
+    <button class="btn-primary" onclick="crearCuenta()">Crear mi perfil</button>
+    <button class="btn-ghost" id="btn-cancelar-crear" style="display:none" onclick="volverAlSelector()">← Volver</button>
     <div style="font-size:11px;color:var(--text3);text-align:center;margin-top:8px;line-height:1.5">Tus datos se guardan encriptados en este dispositivo. Si olvidás la contraseña, no hay forma de recuperarlos.</div>
   </div>
 
   <!-- Ingresar -->
   <div id="auth-ingresar" style="display:none">
+    <div class="auth-sub" id="ai-perfil-nombre" style="margin-bottom:16px"></div>
     <div class="field-wrap"><div class="field-label">Contraseña</div><input type="password" class="input" id="ai-pass" placeholder="Tu contraseña" autocomplete="current-password" onkeydown="if(event.key==='Enter')ingresar()"></div>
     <div class="auth-err" id="ai-err"></div>
     <button class="btn-primary" onclick="ingresar()">Ingresar</button>
     <button class="btn-ghost" id="btn-huella-login" style="display:none" onclick="ingresarConHuella()">👆 Usar huella / Face ID</button>
-    <button class="btn-ghost" onclick="if(confirm('¿Borrar todos los datos de este dispositivo y crear una cuenta nueva? Esto NO se puede deshacer.'))resetearTodo()" style="color:var(--red)">Olvidé mi contraseña / Empezar de cero</button>
+    <button class="btn-ghost" id="btn-volver-selector" style="display:none" onclick="volverAlSelector()">← Elegir otro perfil</button>
+    <button class="btn-ghost" onclick="olvideContrasena()" style="color:var(--red)">Olvidé mi contraseña</button>
+  </div>
+</div>
+
+<!-- MODAL BORRAR PERFIL (pide la contraseña de ESE perfil antes de borrar) -->
+<div class="modal-overlay" id="modal-borrar-perfil" onclick="if(event.target===this)cerrarModal('borrar-perfil')">
+  <div class="modal">
+    <div class="modal-title">Borrar perfil</div>
+    <div style="font-size:13px;color:var(--text3);margin-bottom:14px">Para borrar este perfil y todos sus datos, confirmá su contraseña.</div>
+    <div class="field-wrap"><input type="password" class="input" id="bp-pass" placeholder="Contraseña del perfil" autocomplete="current-password"></div>
+    <div class="auth-err" id="bp-err"></div>
+    <button class="btn-danger" onclick="confirmarBorrarPerfil()">Borrar perfil definitivamente</button>
+    <button class="btn-ghost" onclick="cerrarModal('borrar-perfil')">Cancelar</button>
   </div>
 </div>
 
@@ -265,6 +286,16 @@
     <button class="admin-menu-btn" id="btn-huella-toggle" onclick="toggleHuella()">
       <span class="admin-menu-icon">👆</span>
       <span class="admin-menu-txt"><span class="admin-menu-titulo" id="huella-toggle-titulo">Activar huella / Face ID</span><span class="admin-menu-sub">Atajo de acceso en este dispositivo</span></span>
+      <span class="admin-menu-arrow">›</span>
+    </button>
+    <button class="admin-menu-btn" onclick="forzarUpdate()">
+      <span class="admin-menu-icon">🔄</span>
+      <span class="admin-menu-txt"><span class="admin-menu-titulo">Actualizar app</span><span class="admin-menu-sub">Usar si no ves los últimos cambios</span></span>
+      <span class="admin-menu-arrow">›</span>
+    </button>
+    <button class="admin-menu-btn" onclick="cerrarSesion()">
+      <span class="admin-menu-icon">👥</span>
+      <span class="admin-menu-txt"><span class="admin-menu-titulo">Cambiar de perfil</span><span class="admin-menu-sub">Otro usuario de este dispositivo</span></span>
       <span class="admin-menu-arrow">›</span>
     </button>
     <button class="admin-menu-btn" onclick="cerrarSesion()">
@@ -525,7 +556,7 @@
     </div>
     <button class="btn-primary" onclick="guardarViajeItem()">Agregar gasto</button>
     <button class="btn-danger" id="btn-borrar-viaje-item" onclick="borrarViajeItem()" style="display:none">🗑 Borrar gasto</button>
-    <button class="btn-ghost" onclick="cerrarModal('viaje-item')">Cancelar</button>
+    <button class="btn-ghost" onclick="volverAViajeDetalle()">Cancelar</button>
   </div>
 </div>
 
@@ -604,9 +635,9 @@ function _dbVacia(){
 }
 
 async function save(){
-  if(!_key||!DB) return;
+  if(!_key||!DB||!_perfilSeleccionadoId) return;
   const blob=await _encryptJSON(DB, _key);
-  localStorage.setItem('ff_blob', JSON.stringify(blob));
+  localStorage.setItem('ff_blob_'+_perfilSeleccionadoId, JSON.stringify(blob));
 }
 
 // ═══════════════════════════════════════════════════════════════
@@ -614,6 +645,117 @@ async function save(){
 // ═══════════════════════════════════════════════════════════════
 function showErrAuth(id,msg){ const el=document.getElementById(id); el.textContent=msg; el.style.display='block'; }
 function hideErrAuth(id){ document.getElementById(id).style.display='none'; }
+
+// ── Perfiles (múltiples usuarios en el mismo dispositivo) ──
+function _perfiles(){ try{ return JSON.parse(localStorage.getItem('ff_perfiles')||'[]'); }catch(e){ return []; } }
+function _guardarPerfiles(arr){ localStorage.setItem('ff_perfiles', JSON.stringify(arr)); }
+
+function _migrarPerfilAntiguo(){
+  if(localStorage.getItem('ff_perfiles')) return;
+  const saltVieja=localStorage.getItem('ff_salt');
+  const blobViejo=localStorage.getItem('ff_blob');
+  if(!saltVieja||!blobViejo){ _guardarPerfiles([]); return; }
+  const id=uid();
+  const nombre=localStorage.getItem('ff_nombre')||'Mi perfil';
+  const email=localStorage.getItem('ff_email')||'';
+  localStorage.setItem('ff_blob_'+id, blobViejo);
+  const passkeyViejo=localStorage.getItem('ff_passkey_id');
+  const shortcutViejo=localStorage.getItem('ff_unlock_shortcut');
+  if(passkeyViejo) localStorage.setItem('ff_passkey_'+id, passkeyViejo);
+  if(shortcutViejo) localStorage.setItem('ff_unlock_shortcut_'+id, shortcutViejo);
+  _guardarPerfiles([{id,nombre,email,salt:saltVieja}]);
+  ['ff_salt','ff_blob','ff_email','ff_nombre','ff_passkey_id','ff_unlock_shortcut','ff_intentos'].forEach(k=>localStorage.removeItem(k));
+}
+
+let _perfilSeleccionadoId=null;
+
+function mostrarCrearPerfil(){
+  document.getElementById('auth-selector').style.display='none';
+  document.getElementById('auth-sub').textContent='Nuevo perfil';
+  document.getElementById('auth-crear').style.display='block';
+  document.getElementById('btn-cancelar-crear').style.display=_perfiles().length?'block':'none';
+}
+function volverAlSelector(){
+  document.getElementById('ac-nombre').value=''; document.getElementById('ac-email').value='';
+  document.getElementById('ac-pass').value=''; document.getElementById('ac-pass2').value='';
+  document.getElementById('ai-pass').value='';
+  hideErrAuth('ac-err'); hideErrAuth('ai-err');
+  _perfilSeleccionadoId=null;
+  initAuth();
+}
+function elegirPerfil(id){
+  const p=_perfiles().find(x=>x.id===id);
+  if(!p) return;
+  _perfilSeleccionadoId=id;
+  document.getElementById('auth-selector').style.display='none';
+  document.getElementById('auth-ingresar').style.display='block';
+  document.getElementById('auth-sub').textContent='';
+  document.getElementById('ai-perfil-nombre').textContent='Ingresando como '+p.nombre;
+  document.getElementById('ai-pass').value='';
+  hideErrAuth('ai-err');
+  document.getElementById('btn-huella-login').style.display=localStorage.getItem('ff_passkey_'+id)?'block':'none';
+  document.getElementById('btn-volver-selector').style.display=_perfiles().length>1?'block':'none';
+}
+function editarPerfilPrompt(id){
+  const p=_perfiles().find(x=>x.id===id);
+  if(!p) return;
+  const accion=prompt('Perfil: '+p.nombre+'\n\nEscribí "renombrar" para cambiarle el nombre, o "borrar" para eliminarlo (vas a necesitar su contraseña).');
+  if(!accion) return;
+  const a=accion.trim().toLowerCase();
+  if(a.startsWith('renom')){
+    const nuevo=prompt('Nuevo nombre para el perfil:', p.nombre);
+    if(nuevo&&nuevo.trim()){
+      const perfiles=_perfiles();
+      const idx=perfiles.findIndex(x=>x.id===id);
+      perfiles[idx].nombre=nuevo.trim();
+      _guardarPerfiles(perfiles);
+      initAuth();
+    }
+    return;
+  }
+  if(a.startsWith('borr')){
+    _perfilAEditar=id;
+    document.getElementById('bp-pass').value='';
+    hideErrAuth('bp-err');
+    abrirModal('borrar-perfil');
+  }
+}
+let _perfilAEditar=null;
+function _borrarPerfilPorId(id){
+  localStorage.removeItem('ff_blob_'+id);
+  localStorage.removeItem('ff_passkey_'+id);
+  localStorage.removeItem('ff_unlock_shortcut_'+id);
+  localStorage.removeItem('ff_intentos_'+id);
+  _guardarPerfiles(_perfiles().filter(p=>p.id!==id));
+}
+async function confirmarBorrarPerfil(){
+  hideErrAuth('bp-err');
+  const id=_perfilAEditar;
+  const perfil=_perfiles().find(p=>p.id===id);
+  if(!perfil) return;
+  const pass=document.getElementById('bp-pass').value;
+  try{
+    const key=await _deriveKey(pass, perfil.salt);
+    const blob=JSON.parse(localStorage.getItem('ff_blob_'+id));
+    await _decryptJSON(blob, key);
+    _borrarPerfilPorId(id);
+    cerrarModal('borrar-perfil');
+    initAuth();
+    toast('🗑 Perfil borrado');
+  }catch(e){
+    showErrAuth('bp-err','Contraseña incorrecta');
+  }
+}
+function olvideContrasena(){
+  const id=_perfilSeleccionadoId;
+  const perfil=_perfiles().find(p=>p.id===id);
+  if(!perfil) return;
+  if(!confirm('¿Borrar el perfil "'+perfil.nombre+'" y todos sus datos de este dispositivo?\n\nNo se puede deshacer, y NO afecta a otros perfiles del dispositivo.')) return;
+  _borrarPerfilPorId(id);
+  _perfilSeleccionadoId=null;
+  initAuth();
+  toast('Perfil borrado');
+}
 
 async function crearCuenta(){
   hideErrAuth('ac-err');
@@ -624,17 +766,20 @@ async function crearCuenta(){
   if(!nombre||!email||!pass){ showErrAuth('ac-err','Completá todos los campos'); return; }
   if(pass.length<6){ showErrAuth('ac-err','La contraseña debe tener al menos 6 caracteres'); return; }
   if(pass!==pass2){ showErrAuth('ac-err','Las contraseñas no coinciden'); return; }
+  const perfiles=_perfiles();
+  if(perfiles.some(p=>p.nombre.toLowerCase()===nombre.toLowerCase())){ showErrAuth('ac-err','Ya hay un perfil con ese nombre en este dispositivo'); return; }
+  const id=uid();
   const salt=crypto.getRandomValues(new Uint8Array(16));
   const saltB64=_bufToB64(salt);
   _key=await _deriveKey(pass, saltB64);
   DB=_dbVacia();
   DB.perfil.nombre=nombre; DB.perfil.email=email;
-  localStorage.setItem('ff_salt', saltB64);
-  localStorage.setItem('ff_email', email);
-  localStorage.setItem('ff_nombre', nombre);
+  perfiles.push({id,nombre,email,salt:saltB64});
+  _guardarPerfiles(perfiles);
+  _perfilSeleccionadoId=id;
   await save();
   onDesbloqueado();
-  toast('✅ Cuenta creada');
+  toast('✅ Perfil creado');
 }
 
 function _msEsperaPorIntentos(intentos){
@@ -643,7 +788,11 @@ function _msEsperaPorIntentos(intentos){
 }
 async function ingresar(){
   hideErrAuth('ai-err');
-  const intentos=parseInt(localStorage.getItem('ff_intentos')||'0');
+  const id=_perfilSeleccionadoId;
+  const perfil=_perfiles().find(p=>p.id===id);
+  if(!perfil) return;
+  const intentosKey='ff_intentos_'+id;
+  const intentos=parseInt(localStorage.getItem(intentosKey)||'0');
   const espera=_msEsperaPorIntentos(intentos);
   if(espera>0){
     showErrAuth('ai-err','Demasiados intentos — esperá '+Math.ceil(espera/1000)+'s e intentá de nuevo');
@@ -652,15 +801,14 @@ async function ingresar(){
   const pass=document.getElementById('ai-pass').value;
   if(!pass){ showErrAuth('ai-err','Ingresá tu contraseña'); return; }
   try{
-    const saltB64=localStorage.getItem('ff_salt');
-    const key=await _deriveKey(pass, saltB64);
-    const blob=JSON.parse(localStorage.getItem('ff_blob'));
+    const key=await _deriveKey(pass, perfil.salt);
+    const blob=JSON.parse(localStorage.getItem('ff_blob_'+id));
     const data=await _decryptJSON(blob, key);
     _key=key; DB=data;
-    localStorage.removeItem('ff_intentos');
+    localStorage.removeItem(intentosKey);
     onDesbloqueado();
   }catch(e){
-    localStorage.setItem('ff_intentos', String(intentos+1));
+    localStorage.setItem(intentosKey, String(intentos+1));
     showErrAuth('ai-err','Contraseña incorrecta');
   }
 }
@@ -687,10 +835,11 @@ async function verificarHuella(credIdB64){
 }
 
 async function toggleHuella(){
-  if(localStorage.getItem('ff_passkey_id')){
+  const id=_perfilSeleccionadoId;
+  if(localStorage.getItem('ff_passkey_'+id)){
     if(!confirm('¿Desactivar el acceso por huella en este dispositivo?')) return;
-    localStorage.removeItem('ff_passkey_id');
-    localStorage.removeItem('ff_unlock_shortcut');
+    localStorage.removeItem('ff_passkey_'+id);
+    localStorage.removeItem('ff_unlock_shortcut_'+id);
     actualizarBotonHuella();
     toast('Huella desactivada');
     return;
@@ -700,35 +849,36 @@ async function toggleHuella(){
     const cred=await registrarHuella();
     const credIdB64=_bufToB64(new Uint8Array(cred.rawId));
     const rawKey=await crypto.subtle.exportKey('raw', _key);
-    localStorage.setItem('ff_passkey_id', credIdB64);
-    localStorage.setItem('ff_unlock_shortcut', _bufToB64(new Uint8Array(rawKey)));
+    localStorage.setItem('ff_passkey_'+id, credIdB64);
+    localStorage.setItem('ff_unlock_shortcut_'+id, _bufToB64(new Uint8Array(rawKey)));
     actualizarBotonHuella();
     toast('👆 Huella activada');
   }catch(e){ toast('No se pudo activar la huella'); }
 }
 
 async function ingresarConHuella(){
-  const credId=localStorage.getItem('ff_passkey_id');
+  const id=_perfilSeleccionadoId;
+  const credId=localStorage.getItem('ff_passkey_'+id);
   if(!credId) return;
   try{
     await verificarHuella(credId);
-    const rawKeyB64=localStorage.getItem('ff_unlock_shortcut');
+    const rawKeyB64=localStorage.getItem('ff_unlock_shortcut_'+id);
     const rawKey=_b64ToBuf(rawKeyB64);
     _key=await crypto.subtle.importKey('raw', rawKey, {name:'AES-GCM'}, true, ['encrypt','decrypt']);
-    const blob=JSON.parse(localStorage.getItem('ff_blob'));
+    const blob=JSON.parse(localStorage.getItem('ff_blob_'+id));
     DB=await _decryptJSON(blob, _key);
     onDesbloqueado();
   }catch(e){ toast('No se pudo verificar la huella'); }
 }
 
 function actualizarBotonHuella(){
-  const activo=!!localStorage.getItem('ff_passkey_id');
+  const activo=!!localStorage.getItem('ff_passkey_'+_perfilSeleccionadoId);
   const t=document.getElementById('huella-toggle-titulo');
   if(t) t.textContent=activo?'Desactivar huella / Face ID':'Activar huella / Face ID';
 }
 
 function cerrarSesion(){
-  _key=null; DB=null;
+  _key=null; DB=null; _perfilSeleccionadoId=null;
   document.getElementById('navbar').style.display='none';
   document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
   document.getElementById('page-home').classList.add('active');
@@ -737,24 +887,35 @@ function cerrarSesion(){
   document.getElementById('auth-screen').style.display='flex';
 }
 
-function resetearTodo(){
-  localStorage.clear();
-  location.reload();
-}
-
 function onDesbloqueado(){
   document.getElementById('auth-screen').style.display='none';
   document.getElementById('navbar').style.display='flex';
   actualizarBotonHuella();
   renderHome();
+  history.replaceState({page:'home'},'','');
 }
 
 function initAuth(){
-  const salt=localStorage.getItem('ff_salt');
-  document.getElementById('auth-sub').textContent=salt?'Ingresá para continuar':'Creá tu cuenta para empezar';
-  document.getElementById('auth-crear').style.display=salt?'none':'block';
-  document.getElementById('auth-ingresar').style.display=salt?'block':'none';
-  document.getElementById('btn-huella-login').style.display=(salt&&localStorage.getItem('ff_passkey_id'))?'block':'none';
+  _migrarPerfilAntiguo();
+  const perfiles=_perfiles();
+  document.getElementById('auth-selector').style.display='none';
+  document.getElementById('auth-crear').style.display='none';
+  document.getElementById('auth-ingresar').style.display='none';
+  if(!perfiles.length){
+    document.getElementById('auth-sub').textContent='Creá tu perfil para empezar';
+    document.getElementById('auth-crear').style.display='block';
+    document.getElementById('btn-cancelar-crear').style.display='none';
+    return;
+  }
+  document.getElementById('auth-sub').textContent='¿Quién sos?';
+  document.getElementById('auth-selector').style.display='block';
+  document.getElementById('selector-perfiles-lista').innerHTML=perfiles.map(p=>
+    '<button class="admin-menu-btn" onclick="elegirPerfil(\''+p.id+'\')">'+
+      '<span class="admin-menu-icon" style="background:var(--accent);color:#fff;width:40px;height:40px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-weight:900;font-size:16px">'+esc((p.nombre||'?')[0].toUpperCase())+'</span>'+
+      '<span class="admin-menu-txt"><span class="admin-menu-titulo">'+esc(p.nombre)+'</span></span>'+
+      '<span class="admin-menu-arrow" onclick="event.stopPropagation();editarPerfilPrompt(\''+p.id+'\')">✏️</span>'+
+    '</button>'
+  ).join('');
 }
 
 // ═══════════════════════════════════════════════════════════════
@@ -771,8 +932,28 @@ function fmtFecha(s){ if(!s) return ''; const [y,m,d]=s.split('-'); return d+'/'
 function fechaHoy(){ const n=new Date(); return `${n.getFullYear()}-${String(n.getMonth()+1).padStart(2,'0')}-${String(n.getDate()).padStart(2,'0')}`; }
 let _toastT;
 function toast(msg){ const el=document.getElementById('toast'); el.textContent=msg; el.classList.add('show'); clearTimeout(_toastT); _toastT=setTimeout(()=>el.classList.remove('show'),2600); }
-function abrirModal(id){ document.getElementById('modal-'+id).classList.add('open'); }
-function cerrarModal(id){ document.getElementById('modal-'+id).classList.remove('open'); }
+let _poppingState=false;
+function abrirModal(id){
+  document.getElementById('modal-'+id).classList.add('open');
+  if(!_poppingState) history.pushState({modal:id},'','');
+}
+function cerrarModal(id){
+  document.getElementById('modal-'+id).classList.remove('open');
+  if(!_poppingState) history.back();
+}
+// Pasa de un modal a otro sin acumular una entrada extra en el historial
+// (usado cuando un modal abre otro, ej: detalle de viaje -> agregar gasto)
+function cambiarModal(deId,aId){
+  document.getElementById('modal-'+deId).classList.remove('open');
+  document.getElementById('modal-'+aId).classList.add('open');
+  if(!_poppingState) history.replaceState({modal:aId},'','');
+}
+function forzarUpdate(){
+  if(!('serviceWorker' in navigator)||!navigator.serviceWorker.controller){ toast('ℹ️ Sin actualizaciones pendientes'); return; }
+  navigator.serviceWorker.controller.postMessage({type:'SKIP_WAITING'});
+  navigator.serviceWorker.addEventListener('controllerchange',()=>location.reload());
+  toast('🔄 Actualizando...');
+}
 
 const CATEGORIAS_GASTO=[
   {id:'comida',label:'🍔 Comida'},
@@ -833,7 +1014,21 @@ function navGo(page,btn){
   if(page==='proyectos'){ renderProyectos(); document.getElementById('fab-proyectos').style.display=''; }
   if(page==='compromisos'){ renderCompromisos(); document.getElementById('fab-compromisos').style.display=''; }
   window.scrollTo(0,0);
+  if(!_poppingState&&page!=='home') history.pushState({page},'','');
 }
+
+window.addEventListener('popstate', e=>{
+  _poppingState=true;
+  const openModal=document.querySelector('.modal-overlay.open');
+  if(openModal){
+    openModal.classList.remove('open');
+  } else if(!e.state||e.state.page==='home'){
+    if(_pagActual!=='home') navGo('home', document.getElementById('nav-home'));
+  } else if(e.state.page&&e.state.page!==_pagActual){
+    navGo(e.state.page, document.getElementById('nav-'+e.state.page));
+  }
+  _poppingState=false;
+});
 
 // ═══════════════════════════════════════════════════════════════
 // HOME
@@ -1430,8 +1625,12 @@ function computeViajeBalancePorMoneda(viaje,moneda){
 }
 
 function abrirViajeDetalle(id){
+  if(!_renderViajeDetalleContenido(id)) return;
+  abrirModal('viaje-detalle');
+}
+function _renderViajeDetalleContenido(id){
   const v=DB.viajes.find(x=>x.id===id);
-  if(!v) return;
+  if(!v) return false;
   document.getElementById('vd-titulo').textContent='✈️ '+v.destino;
   document.getElementById('vd-titulo').dataset.viajeId=id;
 
@@ -1476,14 +1675,13 @@ function abrirViajeDetalle(id){
     '</div>'
   ).join(''):'<div style="text-align:center;color:var(--text3);font-size:12px;padding:16px 0">Sin gastos cargados todavía</div>';
 
-  abrirModal('viaje-detalle');
+  return true;
 }
 
 let _rubroViajeItem='otro', _monedaViajeItem='ARS', _participantesViajeItem=[];
 function abrirModalViajeItem(viajeId,itemId){
   const v=DB.viajes.find(x=>x.id===viajeId);
   if(!v) return;
-  cerrarModal('viaje-detalle');
   document.getElementById('vi-viaje-id').value=viajeId;
   document.getElementById('vi-viaje-id').dataset.itemId=itemId||'';
   const it=itemId?(v.items||[]).find(x=>x.id===itemId):null;
@@ -1506,7 +1704,7 @@ function abrirModalViajeItem(viajeId,itemId){
     wrap.style.display='none';
     _participantesViajeItem=[];
   }
-  abrirModal('viaje-item');
+  cambiarModal('viaje-detalle','viaje-item');
 }
 function renderRubroPills(){
   document.getElementById('vi-rubro-pills').innerHTML=RUBROS_VIAJE.map(r=>
@@ -1544,8 +1742,9 @@ async function guardarViajeItem(){
   if(!v.items) v.items=[];
   if(itemId){ const idx=v.items.findIndex(i=>i.id===itemId); if(idx>=0) v.items[idx]=data; }
   else v.items.push(data);
-  await save(); cerrarModal('viaje-item'); renderViajes();
-  abrirViajeDetalle(viajeId);
+  await save(); renderViajes();
+  _renderViajeDetalleContenido(viajeId);
+  cambiarModal('viaje-item','viaje-detalle');
   toast('✅ Gasto agregado');
 }
 async function borrarViajeItem(){
@@ -1554,9 +1753,15 @@ async function borrarViajeItem(){
   const v=DB.viajes.find(x=>x.id===viajeId);
   if(!v||!itemId||!confirm('¿Borrar este gasto del viaje?')) return;
   v.items=(v.items||[]).filter(i=>i.id!==itemId);
-  await save(); cerrarModal('viaje-item'); renderViajes();
-  abrirViajeDetalle(viajeId);
+  await save(); renderViajes();
+  _renderViajeDetalleContenido(viajeId);
+  cambiarModal('viaje-item','viaje-detalle');
   toast('🗑 Gasto eliminado');
+}
+function volverAViajeDetalle(){
+  const viajeId=document.getElementById('vi-viaje-id').value;
+  _renderViajeDetalleContenido(viajeId);
+  cambiarModal('viaje-item','viaje-detalle');
 }
 
 // ═══════════════════════════════════════════════════════════════
