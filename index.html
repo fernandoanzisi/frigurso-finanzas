@@ -497,15 +497,54 @@
   </div>
 </div>
 
+<!-- MODAL PROYECTO DETALLE -->
+<div class="modal-overlay" id="modal-proyecto-detalle" onclick="if(event.target===this)cerrarModal('proyecto-detalle')">
+  <div class="modal" style="max-height:92dvh">
+    <div class="modal-title" id="pd-titulo">Proyecto</div>
+    <div id="pd-resumen" style="margin-bottom:10px"></div>
+    <div class="section-title">Por categoría</div>
+    <div id="pd-categorias" style="margin-bottom:14px"></div>
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">
+      <div class="section-title" style="margin-bottom:0">Lista de compras</div>
+      <button class="btn-icon" style="font-size:14px" onclick="abrirModalCompraItem(document.getElementById('pd-titulo').dataset.proyectoId)">＋</button>
+    </div>
+    <div id="pd-compras" style="margin-bottom:14px"></div>
+    <div class="section-title">Gastos cargados</div>
+    <div id="pd-gastos" style="margin-bottom:8px"></div>
+    <button class="btn-primary" onclick="abrirModalGastoProyecto(document.getElementById('pd-titulo').dataset.proyectoId)">+ Agregar gasto</button>
+    <button class="btn-ghost" onclick="editarProyectoDesdeDetalle()">✏️ Editar proyecto</button>
+    <button class="btn-ghost" onclick="cerrarModal('proyecto-detalle')">Cerrar</button>
+  </div>
+</div>
+
 <!-- MODAL GASTO DE PROYECTO -->
 <div class="modal-overlay" id="modal-proyecto-gasto" onclick="if(event.target===this)cerrarModal('proyecto-gasto')">
   <div class="modal">
     <div class="modal-title">+ Gasto del proyecto</div>
     <input type="hidden" id="pyg-proyecto-id">
     <div class="field-wrap"><div class="field-label">Concepto</div><input type="text" class="input" id="pyg-concepto" placeholder="Ej: Azulejos, mano de obra..."></div>
+    <div class="field-wrap">
+      <div class="field-label">Categoría</div>
+      <div class="pill-sel" id="pyg-cat-pills"></div>
+    </div>
     <div class="field-wrap"><div class="field-label">Monto</div><input type="number" class="input" id="pyg-monto" placeholder="0" step="0.01"></div>
     <button class="btn-primary" onclick="guardarGastoProyecto()">Agregar</button>
-    <button class="btn-ghost" onclick="cerrarModal('proyecto-gasto')">Cancelar</button>
+    <button class="btn-ghost" onclick="volverAProyectoDetalleDesdeGasto()">Cancelar</button>
+  </div>
+</div>
+
+<!-- MODAL ITEM DE COMPRA -->
+<div class="modal-overlay" id="modal-compra-item" onclick="if(event.target===this)cerrarModal('compra-item')">
+  <div class="modal">
+    <div class="modal-title" id="modal-compra-title">+ Item para comprar</div>
+    <input type="hidden" id="ci-proyecto-id">
+    <input type="hidden" id="ci-item-id">
+    <div class="field-wrap"><div class="field-label">Qué hay que comprar</div><input type="text" class="input" id="ci-nombre" placeholder="Ej: Azulejos baño"></div>
+    <div class="field-wrap"><div class="field-label">Cantidad (opcional)</div><input type="text" class="input" id="ci-cantidad" placeholder="Ej: 20 m2, 5 unidades..."></div>
+    <div class="field-wrap"><div class="field-label">Precio estimado</div><input type="number" class="input" id="ci-precio" placeholder="0" step="0.01"></div>
+    <button class="btn-primary" onclick="guardarCompraItem()">Guardar</button>
+    <button class="btn-danger" id="btn-borrar-compra-item" onclick="borrarCompraItem()" style="display:none">🗑 Borrar</button>
+    <button class="btn-ghost" onclick="volverAProyectoDetalleDesdeCompra()">Cancelar</button>
   </div>
 </div>
 
@@ -570,14 +609,48 @@
     <div id="vd-meta" style="margin-bottom:10px"></div>
     <button class="btn-ghost" onclick="abrirModalMetaAhorro(document.getElementById('vd-titulo').dataset.viajeId)">✏️ Configurar meta</button>
 
-    <div class="section-title" style="margin-top:14px">📍 Distancia</div>
+    <div class="section-title" style="margin-top:14px">🛣️ Ruta, combustible y clima</div>
     <div class="card" style="margin-bottom:10px">
-      <div id="vd-distancia" style="font-size:12px;color:var(--text3);margin-bottom:8px">Buscá el destino para calcular la distancia desde donde estás</div>
-      <div style="display:flex;gap:6px">
-        <input type="text" class="input" id="vd-destino-busqueda" placeholder="Ej: Bariloche, Argentina" style="flex:1">
-        <button type="button" class="btn-ghost" style="width:auto;padding:0 14px;margin-bottom:0" onclick="buscarDestino(document.getElementById('vd-titulo').dataset.viajeId)">🔎</button>
+      <div class="field-wrap" style="margin-bottom:8px">
+        <div class="field-label">Origen (de dónde salís)</div>
+        <div style="display:flex;gap:6px">
+          <input type="text" class="input" id="vd-origen-busqueda" placeholder="Ej: Neuquén, Argentina" style="flex:1;margin-bottom:0">
+          <button type="button" class="btn-ghost" style="width:auto;padding:0 14px;margin-bottom:0" onclick="buscarOrigen(document.getElementById('vd-titulo').dataset.viajeId)">🔎</button>
+        </div>
+        <button type="button" class="btn-ghost" style="margin-top:6px;margin-bottom:0;font-size:11px" onclick="usarMiUbicacionOrigen(document.getElementById('vd-titulo').dataset.viajeId)">📍 Usar mi ubicación actual</button>
       </div>
-      <button class="btn-ghost" style="margin-top:8px;margin-bottom:0" onclick="calcularDistancia(document.getElementById('vd-titulo').dataset.viajeId)">📍 Calcular desde mi ubicación</button>
+      <div class="field-wrap" style="margin-bottom:8px">
+        <div class="field-label">Destino</div>
+        <div style="display:flex;gap:6px">
+          <input type="text" class="input" id="vd-destino-busqueda" placeholder="Ej: Buenos Aires, Argentina" style="flex:1;margin-bottom:0">
+          <button type="button" class="btn-ghost" style="width:auto;padding:0 14px;margin-bottom:0" onclick="buscarDestino(document.getElementById('vd-titulo').dataset.viajeId)">🔎</button>
+        </div>
+      </div>
+      <button class="btn-primary" style="margin-bottom:8px" onclick="calcularRuta(document.getElementById('vd-titulo').dataset.viajeId)">🛣️ Calcular ruta completa</button>
+      <div id="vd-ruta-resultado" style="font-size:12px;color:var(--text3)">Buscá origen y destino, después tocá "Calcular ruta completa"</div>
+
+      <div id="vd-combustible-wrap" style="display:none;margin-top:12px;border-top:1px solid var(--border);padding-top:10px">
+        <div class="field-label">⛽ Tu auto</div>
+        <div style="display:flex;gap:8px">
+          <input type="number" class="input" id="vd-consumo" placeholder="km por litro" step="0.1" style="flex:1" oninput="recalcularCombustible(document.getElementById('vd-titulo').dataset.viajeId)">
+          <input type="number" class="input" id="vd-precio-litro" placeholder="$ por litro" step="1" style="flex:1" oninput="recalcularCombustible(document.getElementById('vd-titulo').dataset.viajeId)">
+        </div>
+        <div id="vd-combustible-resultado" style="font-size:13px;margin-top:6px"></div>
+      </div>
+
+      <div id="vd-clima-wrap" style="display:none;margin-top:12px;border-top:1px solid var(--border);padding-top:10px">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px">
+          <div class="field-label" style="margin-bottom:0">🌤️ Clima para tu viaje</div>
+          <button type="button" class="btn-icon" style="font-size:12px" onclick="actualizarClima(document.getElementById('vd-titulo').dataset.viajeId)">🔄</button>
+        </div>
+        <div id="vd-clima-resultado" style="font-size:12px;color:var(--text3)"></div>
+      </div>
+
+      <div id="vd-maps-wrap" style="display:none;margin-top:12px;border-top:1px solid var(--border);padding-top:10px">
+        <div style="font-size:11px;color:var(--text3);margin-bottom:6px">📷 No existen datos abiertos confiables de cámaras/radares en Argentina — para eso y alertas de tránsito en vivo usá Google Maps o Waze durante el viaje.</div>
+        <a id="vd-maps-link" href="#" target="_blank" rel="noopener" class="btn-ghost" style="display:block;text-align:center;text-decoration:none;margin-bottom:8px">🗺️ Abrir ruta en Google Maps</a>
+        <div style="font-size:11px;color:var(--text3);line-height:1.5">🧰 Antes de salir: revisá presión de neumáticos, aceite y agua. Parar a descansar cada 2 horas. Cargar combustible en las ciudades grandes de la ruta, no esperar a la reserva. Llevar agua, algo para comer y la documentación del auto al día.</div>
+      </div>
     </div>
 
     <div class="section-title" style="margin-top:14px">🗺️ Itinerario · <span id="vd-dias-sugeridos" style="color:var(--text3);font-weight:400;text-transform:none;letter-spacing:0"></span></div>
@@ -1562,6 +1635,14 @@ async function borrarInversion(){
 // ═══════════════════════════════════════════════════════════════
 // PROYECTOS
 // ═══════════════════════════════════════════════════════════════
+const CATEGORIAS_PROYECTO=[
+  {id:'materiales',label:'🧱 Materiales'},
+  {id:'mano_obra',label:'👷 Mano de obra'},
+  {id:'compras',label:'🛒 Compras'},
+  {id:'otro',label:'📦 Otro'},
+];
+function catProyectoLabel(id){ return (CATEGORIAS_PROYECTO.find(c=>c.id===id)||CATEGORIAS_PROYECTO[3]).label; }
+
 function renderProyectos(){
   const el=document.getElementById('proyectos-lista');
   const proy=DB.proyectos||[];
@@ -1577,7 +1658,7 @@ function renderProyectos(){
     '</div>';
   }).join(''):'<div class="empty"><div class="empty-icon">🎯</div><div class="empty-text">Sin proyectos</div><div class="empty-sub">Tocá + para crear uno</div></div>';
 }
-let _monedaProyecto='ARS';
+let _monedaProyecto='ARS', _proyectoOrigenDetalle=null;
 function abrirModalProyecto(id){
   const p=id?DB.proyectos.find(x=>x.id===id):null;
   document.getElementById('py-id').value=p?p.id:'';
@@ -1588,7 +1669,27 @@ function abrirModalProyecto(id){
   document.getElementById('modal-proyecto-title').textContent=p?'Editar proyecto':'Nuevo proyecto';
   document.getElementById('btn-borrar-proyecto').style.display=p?'':'none';
   setMonedaProyecto(p?p.moneda:'ARS');
+  _proyectoOrigenDetalle=null;
   abrirModal('proyecto');
+}
+function editarProyectoDesdeDetalle(){
+  const id=document.getElementById('pd-titulo').dataset.proyectoId;
+  const p=DB.proyectos.find(x=>x.id===id);
+  if(!p) return;
+  document.getElementById('py-id').value=p.id;
+  document.getElementById('py-nombre').value=p.nombre;
+  document.getElementById('py-desc').value=p.desc||'';
+  document.getElementById('py-presupuesto').value=p.presupuesto;
+  document.getElementById('py-fecha').value=p.fecha||'';
+  document.getElementById('modal-proyecto-title').textContent='Editar proyecto';
+  document.getElementById('btn-borrar-proyecto').style.display='';
+  setMonedaProyecto(p.moneda);
+  _proyectoOrigenDetalle=id;
+  cambiarModal('proyecto-detalle','proyecto');
+}
+function cancelarModalProyecto(){
+  if(_proyectoOrigenDetalle){ const id=_proyectoOrigenDetalle; _proyectoOrigenDetalle=null; _renderProyectoDetalleContenido(id); cambiarModal('proyecto','proyecto-detalle'); }
+  else cerrarModal('proyecto');
 }
 function setMonedaProyecto(m){ _monedaProyecto=m; document.getElementById('py-mon-ars').classList.toggle('on',m==='ARS'); document.getElementById('py-mon-usd').classList.toggle('on',m==='USD'); }
 async function guardarProyecto(){
@@ -1601,28 +1702,93 @@ async function guardarProyecto(){
     presupuesto:parseFloat(document.getElementById('py-presupuesto').value)||0,
     fecha:document.getElementById('py-fecha').value||null,
     gastos: existente?existente.gastos:[],
+    compras: existente?existente.compras:[],
   };
   if(!DB.proyectos) DB.proyectos=[];
   if(id){ const idx=DB.proyectos.findIndex(p=>p.id===id); if(idx>=0) DB.proyectos[idx]=data; }
   else DB.proyectos.push(data);
-  await save(); cerrarModal('proyecto'); renderProyectos();
+  await save(); renderProyectos();
+  if(_proyectoOrigenDetalle){ const oid=_proyectoOrigenDetalle; _proyectoOrigenDetalle=null; _renderProyectoDetalleContenido(oid); cambiarModal('proyecto','proyecto-detalle'); }
+  else cerrarModal('proyecto');
   toast('✅ Proyecto guardado');
 }
 async function borrarProyecto(){
   const id=document.getElementById('py-id').value;
-  if(!id||!confirm('¿Borrar este proyecto? Se pierden sus gastos cargados.')) return;
+  if(!id||!confirm('¿Borrar este proyecto? Se pierden sus gastos y compras cargadas.')) return;
   DB.proyectos=DB.proyectos.filter(p=>p.id!==id);
-  await save(); cerrarModal('proyecto'); renderProyectos();
+  await save(); renderProyectos();
+  _proyectoOrigenDetalle=null;
+  cerrarModal('proyecto');
+  cerrarModal('proyecto-detalle');
   toast('🗑 Proyecto eliminado');
 }
+
 function abrirProyectoDetalle(id){
-  abrirModalProyecto(id);
+  if(!_renderProyectoDetalleContenido(id)) return;
+  abrirModal('proyecto-detalle');
 }
+function _renderProyectoDetalleContenido(id){
+  const p=DB.proyectos.find(x=>x.id===id);
+  if(!p) return false;
+  document.getElementById('pd-titulo').textContent='🎯 '+p.nombre;
+  document.getElementById('pd-titulo').dataset.proyectoId=id;
+
+  const gastos=p.gastos||[];
+  const gastado=gastos.reduce((s,g)=>s+(g.monto||0),0);
+  const pct=p.presupuesto?Math.min(100,Math.round(gastado/p.presupuesto*100)):0;
+  document.getElementById('pd-resumen').innerHTML='<div class="card">'+
+    (p.desc?'<div style="font-size:12px;color:var(--text3);margin-bottom:8px">'+esc(p.desc)+'</div>':'')+
+    '<div style="display:flex;justify-content:space-between;margin-bottom:6px"><span style="font-size:12px;color:var(--text3)">Gastado</span><span style="font-family:var(--mono);font-weight:700">'+fmtMoney(gastado,p.moneda)+' / '+fmtMoney(p.presupuesto,p.moneda)+'</span></div>'+
+    '<div style="height:6px;border-radius:99px;background:var(--bg3)"><div style="height:100%;width:'+pct+'%;border-radius:99px;background:'+(pct>=100?'var(--red)':'var(--accent)')+'"></div></div>'+
+    (p.fecha?'<div style="font-size:11px;color:var(--text3);margin-top:8px">Fecha objetivo: '+fmtFecha(p.fecha)+'</div>':'')+
+  '</div>';
+
+  const porCat={};
+  gastos.forEach(g=>{ const c=g.categoria||'otro'; porCat[c]=(porCat[c]||0)+(g.monto||0); });
+  const entradas=Object.entries(porCat).sort((a,b)=>b[1]-a[1]);
+  document.getElementById('pd-categorias').innerHTML=entradas.length?'<div class="card">'+entradas.map(([cat,val])=>
+    '<div style="display:flex;justify-content:space-between;padding:4px 0;font-size:13px"><span>'+catProyectoLabel(cat)+'</span><span style="font-family:var(--mono);font-weight:700">'+fmtMoney(val,p.moneda)+'</span></div>'
+  ).join('')+'</div>':'<div style="text-align:center;color:var(--text3);font-size:12px;padding:6px 0">Sin gastos cargados todavía</div>';
+
+  const compras=p.compras||[];
+  document.getElementById('pd-compras').innerHTML=compras.length?compras.map(c=>
+    '<div class="row-item">'+
+      '<div style="cursor:pointer" onclick="toggleCompradoItem(\''+id+'\',\''+c.id+'\')">'+(c.comprado?'✅':'⬜')+'</div>'+
+      '<div class="row-main" style="cursor:pointer" onclick="abrirModalCompraItem(\''+id+'\',\''+c.id+'\')">'+
+        '<div class="row-title" style="'+(c.comprado?'text-decoration:line-through;color:var(--text3)':'')+'">'+esc(c.nombre)+(c.cantidad?' · '+esc(c.cantidad):'')+'</div>'+
+      '</div>'+
+      (c.precio?'<div class="row-amt"><div class="row-amt-val">'+fmtMoney(c.precio,p.moneda)+'</div></div>':'')+
+    '</div>'
+  ).join(''):'<div style="text-align:center;color:var(--text3);font-size:12px;padding:6px 0">Sin items en la lista de compras</div>';
+
+  document.getElementById('pd-gastos').innerHTML=gastos.length?gastos.map(g=>
+    '<div class="row-item" style="cursor:default">'+
+      '<div class="row-main"><div class="row-title">'+esc(g.concepto)+'</div><div class="row-sub">'+catProyectoLabel(g.categoria||'otro')+'</div></div>'+
+      '<div class="row-amt"><div class="row-amt-val">'+fmtMoney(g.monto,p.moneda)+'</div></div>'+
+    '</div>'
+  ).join(''):'<div style="text-align:center;color:var(--text3);font-size:12px;padding:6px 0">Sin gastos cargados</div>';
+
+  return true;
+}
+
+let _catGastoProyecto='otro';
 function abrirModalGastoProyecto(proyectoId){
   document.getElementById('pyg-proyecto-id').value=proyectoId;
   document.getElementById('pyg-concepto').value='';
   document.getElementById('pyg-monto').value='';
-  abrirModal('proyecto-gasto');
+  _catGastoProyecto='otro';
+  renderCatProyectoPills();
+  cambiarModal('proyecto-detalle','proyecto-gasto');
+}
+function renderCatProyectoPills(){
+  document.getElementById('pyg-cat-pills').innerHTML=CATEGORIAS_PROYECTO.map(c=>
+    '<button type="button" class="pill '+(c.id===_catGastoProyecto?'sel':'')+'" onclick="_catGastoProyecto=\''+c.id+'\';renderCatProyectoPills()">'+c.label+'</button>'
+  ).join('');
+}
+function volverAProyectoDetalleDesdeGasto(){
+  const proyectoId=document.getElementById('pyg-proyecto-id').value;
+  _renderProyectoDetalleContenido(proyectoId);
+  cambiarModal('proyecto-gasto','proyecto-detalle');
 }
 async function guardarGastoProyecto(){
   const proyectoId=document.getElementById('pyg-proyecto-id').value;
@@ -1632,9 +1798,73 @@ async function guardarGastoProyecto(){
   const monto=parseFloat(document.getElementById('pyg-monto').value)||0;
   if(!concepto||monto<=0){ toast('⚠️ Completá concepto y monto'); return; }
   if(!p.gastos) p.gastos=[];
-  p.gastos.push({id:uid(),concepto,monto});
-  await save(); cerrarModal('proyecto-gasto'); renderProyectos();
+  p.gastos.push({id:uid(),concepto,monto,categoria:_catGastoProyecto});
+  await save(); renderProyectos();
+  _renderProyectoDetalleContenido(proyectoId);
+  cambiarModal('proyecto-gasto','proyecto-detalle');
   toast('✅ Agregado al proyecto');
+}
+
+// ── Lista de compras del proyecto ──
+function abrirModalCompraItem(proyectoId,itemId){
+  const p=DB.proyectos.find(x=>x.id===proyectoId);
+  if(!p) return;
+  document.getElementById('ci-proyecto-id').value=proyectoId;
+  document.getElementById('ci-item-id').value=itemId||'';
+  const it=itemId?(p.compras||[]).find(x=>x.id===itemId):null;
+  document.getElementById('ci-nombre').value=it?it.nombre:'';
+  document.getElementById('ci-cantidad').value=it?(it.cantidad||''):'';
+  document.getElementById('ci-precio').value=it?(it.precio||''):'';
+  document.getElementById('modal-compra-title').textContent=it?'Editar item':'+ Item para comprar';
+  document.getElementById('btn-borrar-compra-item').style.display=it?'':'none';
+  cambiarModal('proyecto-detalle','compra-item');
+}
+function volverAProyectoDetalleDesdeCompra(){
+  const proyectoId=document.getElementById('ci-proyecto-id').value;
+  _renderProyectoDetalleContenido(proyectoId);
+  cambiarModal('compra-item','proyecto-detalle');
+}
+async function guardarCompraItem(){
+  const proyectoId=document.getElementById('ci-proyecto-id').value;
+  const p=DB.proyectos.find(x=>x.id===proyectoId);
+  if(!p) return;
+  const nombre=document.getElementById('ci-nombre').value.trim();
+  if(!nombre){ toast('⚠️ Ingresá qué hay que comprar'); return; }
+  const itemId=document.getElementById('ci-item-id').value;
+  const existente=itemId?(p.compras||[]).find(x=>x.id===itemId):null;
+  const data={
+    id:itemId||uid(), nombre,
+    cantidad:document.getElementById('ci-cantidad').value.trim(),
+    precio:parseFloat(document.getElementById('ci-precio').value)||0,
+    comprado:existente?existente.comprado:false,
+  };
+  if(!p.compras) p.compras=[];
+  if(itemId){ const idx=p.compras.findIndex(c=>c.id===itemId); if(idx>=0) p.compras[idx]=data; }
+  else p.compras.push(data);
+  await save();
+  _renderProyectoDetalleContenido(proyectoId);
+  cambiarModal('compra-item','proyecto-detalle');
+  toast('✅ Guardado en la lista de compras');
+}
+async function borrarCompraItem(){
+  const proyectoId=document.getElementById('ci-proyecto-id').value;
+  const itemId=document.getElementById('ci-item-id').value;
+  const p=DB.proyectos.find(x=>x.id===proyectoId);
+  if(!p||!itemId) return;
+  p.compras=(p.compras||[]).filter(c=>c.id!==itemId);
+  await save();
+  _renderProyectoDetalleContenido(proyectoId);
+  cambiarModal('compra-item','proyecto-detalle');
+  toast('🗑 Eliminado de la lista');
+}
+async function toggleCompradoItem(proyectoId,itemId){
+  const p=DB.proyectos.find(x=>x.id===proyectoId);
+  if(!p) return;
+  const it=(p.compras||[]).find(x=>x.id===itemId);
+  if(!it) return;
+  it.comprado=!it.comprado;
+  await save();
+  _renderProyectoDetalleContenido(proyectoId);
 }
 
 // ═══════════════════════════════════════════════════════════════
@@ -1751,8 +1981,19 @@ function _renderViajeDetalleContenido(id){
     '</div>'
   ):'<div style="font-size:12px;color:var(--text3)">Sin meta configurada todavía</div>';
 
-  if(v.destinoLat!=null){
-    document.getElementById('vd-destino-busqueda').value=v.destino;
+  document.getElementById('vd-origen-busqueda').value=v.origenNombre||'';
+  document.getElementById('vd-destino-busqueda').value=v.destinoNombre||v.destino||'';
+  if(v.rutaKm){
+    renderRutaResultado(v);
+    renderCombustible(v);
+    renderMapsLink(v);
+    document.getElementById('vd-clima-wrap').style.display='block';
+    renderClimaCache(v);
+  } else {
+    document.getElementById('vd-ruta-resultado').textContent='Buscá origen y destino, después tocá "Calcular ruta completa"';
+    document.getElementById('vd-combustible-wrap').style.display='none';
+    document.getElementById('vd-clima-wrap').style.display='none';
+    document.getElementById('vd-maps-wrap').style.display='none';
   }
 
   const dias=diasSugeridos(v);
@@ -1936,12 +2177,42 @@ async function guardarMetaAhorro(){
   toast('✅ Meta guardada');
 }
 
-// ── Distancia (búsqueda de lugar vía OpenStreetMap + GPS del navegador) ──
+// ── Ruta completa: origen/destino (OpenStreetMap), distancia real por ruta (OSRM), combustible y clima (Open-Meteo) ──
 function haversineKm(lat1,lon1,lat2,lon2){
   const R=6371;
   const dLat=(lat2-lat1)*Math.PI/180, dLon=(lon2-lon1)*Math.PI/180;
   const a=Math.sin(dLat/2)**2+Math.cos(lat1*Math.PI/180)*Math.cos(lat2*Math.PI/180)*Math.sin(dLon/2)**2;
   return R*2*Math.atan2(Math.sqrt(a),Math.sqrt(1-a));
+}
+async function buscarOrigen(viajeId){
+  const q=document.getElementById('vd-origen-busqueda').value.trim();
+  if(!q){ toast('⚠️ Escribí un origen para buscar'); return; }
+  try{
+    const res=await fetch('https://nominatim.openstreetmap.org/search?format=json&limit=1&q='+encodeURIComponent(q));
+    const data=await res.json();
+    if(!data||!data.length){ toast('No se encontró ese lugar'); return; }
+    const v=DB.viajes.find(x=>x.id===viajeId);
+    if(!v) return;
+    v.origenLat=parseFloat(data[0].lat);
+    v.origenLon=parseFloat(data[0].lon);
+    v.origenNombre=data[0].display_name||q;
+    await save();
+    toast('📍 Origen encontrado');
+  }catch(e){ toast('No se pudo buscar — revisá tu conexión'); }
+}
+function usarMiUbicacionOrigen(viajeId){
+  if(!navigator.geolocation){ toast('Tu dispositivo no soporta GPS'); return; }
+  toast('📍 Buscando tu ubicación...');
+  navigator.geolocation.getCurrentPosition(async pos=>{
+    const v=DB.viajes.find(x=>x.id===viajeId);
+    if(!v) return;
+    v.origenLat=pos.coords.latitude;
+    v.origenLon=pos.coords.longitude;
+    v.origenNombre='Mi ubicación actual';
+    document.getElementById('vd-origen-busqueda').value='Mi ubicación actual';
+    await save();
+    toast('📍 Ubicación guardada como origen');
+  }, ()=>{ toast('No se pudo obtener tu ubicación — revisá los permisos'); });
 }
 async function buscarDestino(viajeId){
   const q=document.getElementById('vd-destino-busqueda').value.trim();
@@ -1954,20 +2225,120 @@ async function buscarDestino(viajeId){
     if(!v) return;
     v.destinoLat=parseFloat(data[0].lat);
     v.destinoLon=parseFloat(data[0].lon);
+    v.destinoNombre=data[0].display_name||q;
     await save();
-    document.getElementById('vd-distancia').textContent='📍 Destino ubicado: '+(data[0].display_name||q)+'. Tocá "Calcular desde mi ubicación".';
     toast('📍 Destino encontrado');
   }catch(e){ toast('No se pudo buscar — revisá tu conexión'); }
 }
-function calcularDistancia(viajeId){
+async function calcularRuta(viajeId){
   const v=DB.viajes.find(x=>x.id===viajeId);
-  if(!v||v.destinoLat==null){ toast('⚠️ Primero buscá el destino'); return; }
-  if(!navigator.geolocation){ toast('Tu dispositivo no soporta GPS'); return; }
-  toast('📍 Buscando tu ubicación...');
-  navigator.geolocation.getCurrentPosition(pos=>{
-    const d=haversineKm(pos.coords.latitude,pos.coords.longitude,v.destinoLat,v.destinoLon);
-    document.getElementById('vd-distancia').textContent='📍 Distancia en línea recta: ~'+Math.round(d)+' km (no es la ruta manejando, es en línea recta)';
-  }, ()=>{ toast('No se pudo obtener tu ubicación — revisá los permisos'); });
+  if(!v) return;
+  if(v.origenLat==null||v.destinoLat==null){ toast('⚠️ Necesitás buscar origen y destino primero'); return; }
+  const el=document.getElementById('vd-ruta-resultado');
+  el.textContent='Calculando ruta...';
+  try{
+    const url='https://router.project-osrm.org/route/v1/driving/'+v.origenLon+','+v.origenLat+';'+v.destinoLon+','+v.destinoLat+'?overview=false&steps=true';
+    const res=await fetch(url);
+    const data=await res.json();
+    if(!data.routes||!data.routes.length){
+      const d=haversineKm(v.origenLat,v.origenLon,v.destinoLat,v.destinoLon);
+      el.textContent='No se pudo calcular la ruta manejando. Distancia en línea recta: ~'+Math.round(d)+' km.';
+      return;
+    }
+    const route=data.routes[0];
+    v.rutaKm=route.distance/1000;
+    v.rutaHoras=route.duration/3600;
+    const vias=new Set();
+    (route.legs||[]).forEach(leg=>(leg.steps||[]).forEach(s=>{ if(s.name) vias.add(s.name); }));
+    v.rutaVias=[...vias].slice(0,8);
+    await save();
+    renderRutaResultado(v);
+    renderCombustible(v);
+    renderMapsLink(v);
+    document.getElementById('vd-clima-wrap').style.display='block';
+    await actualizarClima(viajeId);
+    toast('🛣️ Ruta calculada');
+  }catch(e){ el.textContent='No se pudo calcular la ruta — revisá tu conexión.'; }
+}
+function renderRutaResultado(v){
+  const h=Math.floor(v.rutaHoras), m=Math.round((v.rutaHoras-h)*60);
+  document.getElementById('vd-ruta-resultado').innerHTML=
+    '<div style="font-size:20px;font-weight:900;font-family:var(--mono)">'+Math.round(v.rutaKm)+' km</div>'+
+    '<div style="font-size:12px;color:var(--text2);margin-bottom:6px">⏱️ ~'+h+'h '+m+'min manejando (sin contar paradas)</div>'+
+    (v.rutaVias&&v.rutaVias.length?'<div style="font-size:11px;color:var(--text3)">Vías principales: '+v.rutaVias.map(esc).join(' · ')+'</div>':'');
+  document.getElementById('vd-combustible-wrap').style.display='block';
+  document.getElementById('vd-maps-wrap').style.display='block';
+}
+function recalcularCombustible(viajeId){
+  const v=DB.viajes.find(x=>x.id===viajeId);
+  if(!v||!v.rutaKm) return;
+  v.combustibleConsumo=parseFloat(document.getElementById('vd-consumo').value)||0;
+  v.combustiblePrecioLitro=parseFloat(document.getElementById('vd-precio-litro').value)||0;
+  save();
+  renderCombustible(v);
+}
+function renderCombustible(v){
+  document.getElementById('vd-consumo').value=v.combustibleConsumo||'';
+  document.getElementById('vd-precio-litro').value=v.combustiblePrecioLitro||'';
+  const el=document.getElementById('vd-combustible-resultado');
+  if(!v.rutaKm||!v.combustibleConsumo||!v.combustiblePrecioLitro){ el.textContent=''; return; }
+  const litrosIda=v.rutaKm/v.combustibleConsumo;
+  const litrosIdaVuelta=litrosIda*2;
+  const costoIda=litrosIda*v.combustiblePrecioLitro;
+  const costoIdaVuelta=litrosIdaVuelta*v.combustiblePrecioLitro;
+  el.innerHTML=
+    '<div>Solo ida: '+litrosIda.toFixed(1)+' litros ≈ <b style="color:var(--accent)">'+fmtMoney(costoIda,'ARS')+'</b></div>'+
+    '<div>Ida y vuelta: '+litrosIdaVuelta.toFixed(1)+' litros ≈ <b style="color:var(--accent)">'+fmtMoney(costoIdaVuelta,'ARS')+'</b></div>';
+}
+function climaLabel(code){
+  const map={
+    0:'☀️ Despejado',1:'🌤️ Mayormente despejado',2:'⛅ Parc. nublado',3:'☁️ Nublado',
+    45:'🌫️ Niebla',48:'🌫️ Niebla escarchada',
+    51:'🌦️ Llovizna leve',53:'🌦️ Llovizna',55:'🌧️ Llovizna intensa',
+    56:'🌧️ Llovizna helada',57:'🌧️ Llovizna helada intensa',
+    61:'🌧️ Lluvia leve',63:'🌧️ Lluvia',65:'🌧️ Lluvia fuerte',
+    66:'🌧️ Lluvia helada',67:'🌧️ Lluvia helada fuerte',
+    71:'🌨️ Nieve leve',73:'🌨️ Nieve',75:'❄️ Nieve fuerte',77:'🌨️ Granizo fino',
+    80:'🌦️ Chubascos leves',81:'🌧️ Chubascos',82:'⛈️ Chubascos fuertes',
+    85:'🌨️ Chubascos de nieve',86:'❄️ Chubascos de nieve fuertes',
+    95:'⛈️ Tormenta',96:'⛈️ Tormenta con granizo',99:'⛈️ Tormenta fuerte',
+  };
+  return map[code]||('🌡️ Código '+code);
+}
+function renderClimaCache(v){
+  const el=document.getElementById('vd-clima-resultado');
+  if(!v.climaData||!v.climaData.length){ el.textContent='Tocá 🔄 para ver el pronóstico de tu viaje.'; return; }
+  el.innerHTML=v.climaData.map(d=>
+    '<div style="display:flex;justify-content:space-between;align-items:center;padding:4px 0">'+
+      '<span>'+fmtFecha(d.fecha)+'</span><span>'+d.label+'</span>'+
+      '<span style="font-family:var(--mono)">'+d.min+'° / '+d.max+'°'+(d.lluvia!=null?' · 🌧️'+d.lluvia+'%':'')+'</span>'+
+    '</div>'
+  ).join('');
+}
+async function actualizarClima(viajeId){
+  const v=DB.viajes.find(x=>x.id===viajeId);
+  if(!v) return;
+  if(v.destinoLat==null||!v.inicio||!v.fin){ toast('⚠️ Necesitás destino y fechas del viaje'); return; }
+  document.getElementById('vd-clima-wrap').style.display='block';
+  const el=document.getElementById('vd-clima-resultado');
+  el.textContent='Buscando pronóstico...';
+  try{
+    const url='https://api.open-meteo.com/v1/forecast?latitude='+v.destinoLat+'&longitude='+v.destinoLon+'&daily=weathercode,temperature_2m_max,temperature_2m_min,precipitation_probability_max&timezone=auto&start_date='+v.inicio+'&end_date='+v.fin;
+    const res=await fetch(url);
+    const data=await res.json();
+    if(!data.daily||!data.daily.time){ el.textContent='El pronóstico todavía no está disponible para esas fechas (Open-Meteo publica ~16 días antes del viaje — probá de nuevo más cerca de la fecha).'; return; }
+    v.climaData=data.daily.time.map((fecha,i)=>({
+      fecha, label:climaLabel(data.daily.weathercode[i]),
+      max:Math.round(data.daily.temperature_2m_max[i]), min:Math.round(data.daily.temperature_2m_min[i]),
+      lluvia:data.daily.precipitation_probability_max?data.daily.precipitation_probability_max[i]:null,
+    }));
+    await save();
+    renderClimaCache(v);
+  }catch(e){ el.textContent='No se pudo obtener el clima — revisá tu conexión.'; }
+}
+function renderMapsLink(v){
+  const a=document.getElementById('vd-maps-link');
+  a.href='https://www.google.com/maps/dir/?api=1&origin='+v.origenLat+','+v.origenLon+'&destination='+v.destinoLat+','+v.destinoLon+'&travelmode=driving';
 }
 
 // ── Itinerario (tramos, alojamientos, actividades) ──
