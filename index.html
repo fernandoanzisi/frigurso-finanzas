@@ -134,8 +134,8 @@
   <div id="auth-crear" style="display:none">
     <div class="field-wrap"><div class="field-label">Nombre</div><input type="text" class="input" id="ac-nombre" placeholder="Tu nombre"></div>
     <div class="field-wrap"><div class="field-label">Email</div><input type="email" class="input" id="ac-email" placeholder="tu@email.com"></div>
-    <div class="field-wrap"><div class="field-label">Contraseña</div><input type="password" class="input" id="ac-pass" placeholder="Mínimo 6 caracteres"></div>
-    <div class="field-wrap"><div class="field-label">Repetir contraseña</div><input type="password" class="input" id="ac-pass2" placeholder="Repetí la contraseña"></div>
+    <div class="field-wrap"><div class="field-label">Contraseña</div><input type="password" class="input" id="ac-pass" placeholder="Mínimo 6 caracteres" autocomplete="new-password"></div>
+    <div class="field-wrap"><div class="field-label">Repetir contraseña</div><input type="password" class="input" id="ac-pass2" placeholder="Repetí la contraseña" autocomplete="new-password"></div>
     <div class="auth-err" id="ac-err"></div>
     <button class="btn-primary" onclick="crearCuenta()">Crear mi cuenta</button>
     <div style="font-size:11px;color:var(--text3);text-align:center;margin-top:8px;line-height:1.5">Tus datos se guardan encriptados en este dispositivo. Si olvidás la contraseña, no hay forma de recuperarlos.</div>
@@ -143,7 +143,7 @@
 
   <!-- Ingresar -->
   <div id="auth-ingresar" style="display:none">
-    <div class="field-wrap"><div class="field-label">Contraseña</div><input type="password" class="input" id="ai-pass" placeholder="Tu contraseña" onkeydown="if(event.key==='Enter')ingresar()"></div>
+    <div class="field-wrap"><div class="field-label">Contraseña</div><input type="password" class="input" id="ai-pass" placeholder="Tu contraseña" autocomplete="current-password" onkeydown="if(event.key==='Enter')ingresar()"></div>
     <div class="auth-err" id="ai-err"></div>
     <button class="btn-primary" onclick="ingresar()">Ingresar</button>
     <button class="btn-ghost" id="btn-huella-login" style="display:none" onclick="ingresarConHuella()">👆 Usar huella / Face ID</button>
@@ -568,7 +568,7 @@ async function _deriveKey(password, saltB64){
   const salt=_b64ToBuf(saltB64);
   const keyMaterial=await crypto.subtle.importKey('raw', enc.encode(password), 'PBKDF2', false, ['deriveKey']);
   return crypto.subtle.deriveKey(
-    {name:'PBKDF2', salt, iterations:150000, hash:'SHA-256'},
+    {name:'PBKDF2', salt, iterations:300000, hash:'SHA-256'},
     keyMaterial,
     {name:'AES-GCM', length:256},
     true,
@@ -637,8 +637,18 @@ async function crearCuenta(){
   toast('✅ Cuenta creada');
 }
 
+function _msEsperaPorIntentos(intentos){
+  if(intentos<3) return 0;
+  return Math.min(30000, 1000*Math.pow(2,intentos-3)); // 1s,2s,4s...hasta 30s
+}
 async function ingresar(){
   hideErrAuth('ai-err');
+  const intentos=parseInt(localStorage.getItem('ff_intentos')||'0');
+  const espera=_msEsperaPorIntentos(intentos);
+  if(espera>0){
+    showErrAuth('ai-err','Demasiados intentos — esperá '+Math.ceil(espera/1000)+'s e intentá de nuevo');
+    return;
+  }
   const pass=document.getElementById('ai-pass').value;
   if(!pass){ showErrAuth('ai-err','Ingresá tu contraseña'); return; }
   try{
@@ -647,8 +657,10 @@ async function ingresar(){
     const blob=JSON.parse(localStorage.getItem('ff_blob'));
     const data=await _decryptJSON(blob, key);
     _key=key; DB=data;
+    localStorage.removeItem('ff_intentos');
     onDesbloqueado();
   }catch(e){
+    localStorage.setItem('ff_intentos', String(intentos+1));
     showErrAuth('ai-err','Contraseña incorrecta');
   }
 }
@@ -1618,6 +1630,24 @@ function importarDatos(e){
   };
   reader.readAsText(file);
 }
+
+// ═══════════════════════════════════════════════════════════════
+// BLOQUEO AUTOMÁTICO — por inactividad y al salir de la app
+// ═══════════════════════════════════════════════════════════════
+let _inactivityTimer=null;
+const INACTIVITY_MS=3*60*1000; // 3 minutos sin tocar nada
+function _resetInactivityTimer(){
+  clearTimeout(_inactivityTimer);
+  if(!_key) return;
+  _inactivityTimer=setTimeout(()=>{ cerrarSesion(); toast('🔒 Se bloqueó por inactividad'); }, INACTIVITY_MS);
+}
+['click','touchstart','keydown','scroll'].forEach(ev=>document.addEventListener(ev,_resetInactivityTimer,{passive:true}));
+
+let _hiddenAt=null;
+document.addEventListener('visibilitychange', ()=>{
+  if(document.hidden){ _hiddenAt=Date.now(); }
+  else if(_hiddenAt&&_key&&(Date.now()-_hiddenAt)>5000){ cerrarSesion(); toast('🔒 Se bloqueó al salir de la app'); }
+});
 
 // ═══════════════════════════════════════════════════════════════
 // INIT
