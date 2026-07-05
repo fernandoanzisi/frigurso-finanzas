@@ -1,0 +1,1629 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, viewport-fit=cover">
+<title>Frigurso Finanzas</title>
+<link rel="manifest" href="manifest.json">
+<meta name="theme-color" content="#0b1220">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<style>
+  :root{
+    --bg:#0b1220;--bg2:#111a2e;--bg3:#182544;--card:#14203a;
+    --text:#eef2ff;--text2:#a8b3d1;--text3:#5b6690;
+    --accent:#5b6bf5;--accent2:#7c3aed;--gold:#d4af37;
+    --green:#22c55e;--red:#f87171;--border:#223055;
+    --shadow:0 2px 16px rgba(0,0,0,.5);
+    --font:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;
+    --mono:'SF Mono','Fira Code',monospace;
+    --sab:env(safe-area-inset-bottom,0px);
+  }
+  *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
+  body{font-family:var(--font);background:var(--bg);color:var(--text);min-height:100dvh}
+  button{font-family:var(--font);cursor:pointer;border:none;outline:none;background:none}
+  input,select,textarea{font-family:var(--font)}
+
+  .nav-bottom{position:fixed;bottom:0;left:0;right:0;z-index:100;background:var(--bg2);border-top:1px solid var(--border);display:flex;height:calc(58px + var(--sab));padding-bottom:var(--sab)}
+  .nav-btn{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;color:var(--text3);font-size:10px;font-weight:600;text-transform:uppercase;letter-spacing:.5px;transition:color .15s}
+  .nav-btn .ni{font-size:22px}.nav-btn.active{color:var(--accent)}.nav-btn:active{opacity:.7}
+
+  .header{position:sticky;top:0;z-index:50;background:var(--bg2);border-bottom:1px solid var(--border);padding:14px 16px;display:flex;align-items:center;gap:10px}
+  .header-title{font-size:19px;font-weight:800;color:var(--text);flex:1}
+  .header-sub{font-size:11px;color:var(--text3)}
+  .btn-icon{width:38px;height:38px;border-radius:50%;background:var(--bg3);border:1px solid var(--border);color:var(--text2);font-size:17px;display:flex;align-items:center;justify-content:center;flex-shrink:0}
+
+  .page{display:none;padding-bottom:calc(78px + var(--sab))}.page.active{display:block}
+
+  .section{padding:14px 14px 0}
+  .section-title{font-size:10px;font-weight:700;letter-spacing:1.5px;color:var(--text3);text-transform:uppercase;margin-bottom:10px}
+  .card{background:var(--card);border:1px solid var(--border);border-radius:16px;padding:14px 16px;margin-bottom:10px;box-shadow:var(--shadow)}
+
+  /* BALANCE HERO */
+  .balance-hero{margin:14px;border-radius:22px;padding:24px 20px;background:linear-gradient(135deg,var(--accent),var(--accent2));box-shadow:0 8px 30px rgba(91,107,245,.35);position:relative;overflow:hidden}
+  .balance-hero::after{content:'';position:absolute;top:-40%;right:-20%;width:200px;height:200px;border-radius:50%;background:rgba(255,255,255,.08)}
+  .balance-lbl{font-size:11px;font-weight:700;color:rgba(255,255,255,.75);text-transform:uppercase;letter-spacing:1px}
+  .balance-val{font-size:36px;font-weight:900;color:#fff;font-family:var(--mono);margin-top:4px;line-height:1.1}
+  .balance-sub{font-size:12px;color:rgba(255,255,255,.7);margin-top:6px}
+  .balance-actions{display:flex;gap:8px;margin-top:16px}
+  .balance-act-btn{flex:1;background:rgba(255,255,255,.14);border:1px solid rgba(255,255,255,.2);border-radius:12px;padding:10px 6px;display:flex;flex-direction:column;align-items:center;gap:4px;color:#fff;font-size:10px;font-weight:700}
+  .balance-act-btn .ni{font-size:18px}
+
+  /* KPI GRID */
+  .kpi-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:10px;padding:14px}
+  .kpi-box{background:var(--card);border:1px solid var(--border);border-radius:14px;padding:14px 12px;text-align:center}
+  .kpi-val{font-size:22px;font-weight:900;font-family:var(--mono)}
+  .kpi-lbl{font-size:10px;color:var(--text3);font-weight:700;text-transform:uppercase;letter-spacing:1px;margin-top:3px}
+
+  /* LIST ROWS */
+  .row-item{display:flex;align-items:center;gap:12px;background:var(--card);border:1px solid var(--border);border-radius:14px;padding:12px 14px;margin-bottom:8px;cursor:pointer}
+  .row-item:active{border-color:var(--accent)}
+  .row-icon{width:42px;height:42px;border-radius:12px;display:flex;align-items:center;justify-content:center;font-size:19px;flex-shrink:0}
+  .row-main{flex:1;min-width:0}
+  .row-title{font-size:14px;font-weight:700;color:var(--text);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .row-sub{font-size:11px;color:var(--text3);margin-top:2px}
+  .row-amt{text-align:right;flex-shrink:0}
+  .row-amt-val{font-size:15px;font-weight:800;font-family:var(--mono)}
+  .row-amt-lbl{font-size:9px;color:var(--text3);margin-top:2px}
+
+  /* MODALS */
+  .modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,.75);z-index:200;display:flex;align-items:flex-end;justify-content:center;opacity:0;pointer-events:none;transition:opacity .2s}
+  .modal-overlay.open{opacity:1;pointer-events:all}
+  .modal{background:var(--bg2);border-radius:22px 22px 0 0;width:100%;max-width:520px;padding:20px 18px calc(30px + var(--sab));border-top:1px solid var(--border);transform:translateY(100%);transition:transform .25s;max-height:90dvh;overflow-y:auto}
+  .modal-overlay.open .modal{transform:translateY(0)}
+  .modal-title{font-size:17px;font-weight:800;color:var(--text);margin-bottom:16px}
+  .field-label{font-size:11px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:1px;margin-bottom:5px}
+  .field-wrap{margin-bottom:14px}
+  .input{width:100%;padding:13px 14px;border-radius:12px;border:1px solid var(--border);background:var(--bg3);color:var(--text);font-size:15px}
+  .input:focus{outline:none;border-color:var(--accent)}
+  select.input option{background:var(--bg3);color:var(--text)}
+  .btn-primary{width:100%;padding:15px;border-radius:14px;background:var(--accent);color:#fff;font-size:15px;font-weight:800;margin-bottom:8px}
+  .btn-primary:active{opacity:.85}
+  .btn-ghost{width:100%;padding:13px;border-radius:14px;border:1px solid var(--border);background:transparent;color:var(--text3);font-size:14px;font-weight:600;margin-bottom:8px}
+  .btn-danger{width:100%;padding:13px;border-radius:14px;background:rgba(248,113,113,.1);border:1px solid rgba(248,113,113,.3);color:var(--red);font-size:14px;font-weight:700;margin-bottom:8px}
+  .pill-sel{display:flex;flex-wrap:wrap;gap:6px;margin-top:4px}
+  .pill{padding:8px 14px;border-radius:99px;font-size:12px;font-weight:600;border:1px solid var(--border);background:var(--bg3);color:var(--text2);cursor:pointer}
+  .pill.sel{background:rgba(91,107,245,.18);border-color:var(--accent);color:var(--accent);font-weight:700}
+  .moneda-toggle{display:flex;border-radius:12px;overflow:hidden;border:1px solid var(--border)}
+  .moneda-toggle button{flex:1;padding:10px;font-size:13px;font-weight:800;background:var(--bg3);color:var(--text3)}
+  .moneda-toggle button.on{background:rgba(91,107,245,.18);color:var(--accent)}
+
+  .fab{position:fixed;bottom:calc(68px + var(--sab));right:16px;z-index:80;width:56px;height:56px;border-radius:50%;background:var(--accent);color:#fff;font-size:28px;box-shadow:0 4px 20px rgba(91,107,245,.5);display:flex;align-items:center;justify-content:center}
+  .fab:active{transform:scale(.93)}
+
+  .toast{position:fixed;bottom:calc(75px + var(--sab));left:50%;transform:translateX(-50%) translateY(20px);background:var(--accent);color:#fff;padding:10px 20px;border-radius:99px;font-size:13px;font-weight:700;opacity:0;transition:all .25s;z-index:9999;white-space:nowrap;pointer-events:none;max-width:88vw;overflow:hidden;text-overflow:ellipsis}
+  .toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
+
+  .empty{text-align:center;padding:50px 20px}
+  .empty-icon{font-size:52px;margin-bottom:12px}
+  .empty-text{font-size:15px;font-weight:700;color:var(--text);margin-bottom:6px}
+  .empty-sub{font-size:12px;color:var(--text3)}
+  .sep{height:1px;background:var(--border);margin:10px 0}
+  .tag{display:inline-block;padding:2px 8px;border-radius:99px;font-size:10px;font-weight:700}
+
+  .admin-menu-btn{display:flex;align-items:center;gap:14px;width:100%;background:var(--card);border:1px solid var(--border);border-radius:16px;padding:14px 16px;text-align:left;cursor:pointer}
+  .admin-menu-btn:active{border-color:var(--accent)}
+  .admin-menu-icon{font-size:24px;flex-shrink:0}
+  .admin-menu-txt{flex:1;display:flex;flex-direction:column;gap:2px;min-width:0}
+  .admin-menu-titulo{font-size:14px;font-weight:700;color:var(--text)}
+  .admin-menu-sub{font-size:11px;color:var(--text3)}
+  .admin-menu-arrow{font-size:20px;color:var(--text3);flex-shrink:0}
+
+  /* AUTH */
+  .auth-screen{position:fixed;inset:0;background:linear-gradient(160deg,var(--bg),#0d1530 60%,#161033);z-index:500;display:flex;flex-direction:column;justify-content:center;padding:28px}
+  .auth-logo{font-size:52px;text-align:center;margin-bottom:6px}
+  .auth-title{font-size:24px;font-weight:900;text-align:center;color:var(--text);margin-bottom:6px}
+  .auth-sub{font-size:13px;text-align:center;color:var(--text3);margin-bottom:28px}
+  .auth-tabs{display:flex;gap:6px;margin-bottom:8px}
+  .auth-tab{flex:1;text-align:center;padding:8px;font-size:12px;font-weight:700;color:var(--text3);border-bottom:2px solid transparent}
+  .auth-tab.on{color:var(--accent);border-color:var(--accent)}
+  .auth-err{color:var(--red);font-size:12px;text-align:center;margin-bottom:10px;display:none}
+
+  .progress-bar{height:6px;border-radius:99px;background:var(--bg3);overflow:hidden}
+  .progress-fill{height:100%;border-radius:99px;transition:width .3s}
+</style>
+</head>
+<body>
+
+<!-- AUTH -->
+<div class="auth-screen" id="auth-screen">
+  <div class="auth-logo">💳</div>
+  <div class="auth-title">Frigurso Finanzas</div>
+  <div class="auth-sub" id="auth-sub">Cargando...</div>
+
+  <!-- Crear cuenta -->
+  <div id="auth-crear" style="display:none">
+    <div class="field-wrap"><div class="field-label">Nombre</div><input type="text" class="input" id="ac-nombre" placeholder="Tu nombre"></div>
+    <div class="field-wrap"><div class="field-label">Email</div><input type="email" class="input" id="ac-email" placeholder="tu@email.com"></div>
+    <div class="field-wrap"><div class="field-label">Contraseña</div><input type="password" class="input" id="ac-pass" placeholder="Mínimo 6 caracteres"></div>
+    <div class="field-wrap"><div class="field-label">Repetir contraseña</div><input type="password" class="input" id="ac-pass2" placeholder="Repetí la contraseña"></div>
+    <div class="auth-err" id="ac-err"></div>
+    <button class="btn-primary" onclick="crearCuenta()">Crear mi cuenta</button>
+    <div style="font-size:11px;color:var(--text3);text-align:center;margin-top:8px;line-height:1.5">Tus datos se guardan encriptados en este dispositivo. Si olvidás la contraseña, no hay forma de recuperarlos.</div>
+  </div>
+
+  <!-- Ingresar -->
+  <div id="auth-ingresar" style="display:none">
+    <div class="field-wrap"><div class="field-label">Contraseña</div><input type="password" class="input" id="ai-pass" placeholder="Tu contraseña" onkeydown="if(event.key==='Enter')ingresar()"></div>
+    <div class="auth-err" id="ai-err"></div>
+    <button class="btn-primary" onclick="ingresar()">Ingresar</button>
+    <button class="btn-ghost" id="btn-huella-login" style="display:none" onclick="ingresarConHuella()">👆 Usar huella / Face ID</button>
+    <button class="btn-ghost" onclick="if(confirm('¿Borrar todos los datos de este dispositivo y crear una cuenta nueva? Esto NO se puede deshacer.'))resetearTodo()" style="color:var(--red)">Olvidé mi contraseña / Empezar de cero</button>
+  </div>
+</div>
+
+<nav class="nav-bottom" id="navbar" style="display:none">
+  <button class="nav-btn active" id="nav-home" onclick="navGo('home',this)"><span class="ni">🏠</span><span>Inicio</span></button>
+  <button class="nav-btn" id="nav-gastos" onclick="navGo('gastos',this)"><span class="ni">💸</span><span>Gastos</span></button>
+  <button class="nav-btn" id="nav-cuentas" onclick="navGo('cuentas',this)"><span class="ni">🏦</span><span>Cuentas</span></button>
+  <button class="nav-btn" id="nav-viajes" onclick="navGo('viajes',this)"><span class="ni">✈️</span><span>Viajes</span></button>
+  <button class="nav-btn" id="nav-mas" onclick="navGo('mas',this)"><span class="ni">📋</span><span>Más</span></button>
+</nav>
+
+<!-- HOME -->
+<div class="page active" id="page-home">
+  <div class="header">
+    <div style="flex:1">
+      <div class="header-title">💳 Finanzas</div>
+      <div class="header-sub" id="home-sub">Hola</div>
+    </div>
+    <button class="btn-icon" onclick="navGo('mas',document.getElementById('nav-mas'))">☰</button>
+  </div>
+  <div class="balance-hero">
+    <div class="balance-lbl">Balance total (convertido)</div>
+    <div class="balance-val" id="home-balance">$0</div>
+    <div class="balance-sub" id="home-balance-detalle">ARS $0 · USD $0</div>
+    <div class="balance-actions">
+      <button class="balance-act-btn" onclick="abrirModalGasto()"><span class="ni">💸</span>Gasto</button>
+      <button class="balance-act-btn" onclick="navGo('cuentas',document.getElementById('nav-cuentas'))"><span class="ni">🏦</span>Cuentas</button>
+      <button class="balance-act-btn" onclick="navGo('viajes',document.getElementById('nav-viajes'))"><span class="ni">✈️</span>Viajes</button>
+      <button class="balance-act-btn" onclick="navGo('mas',document.getElementById('nav-mas'))"><span class="ni">📊</span>Más</button>
+    </div>
+  </div>
+  <div class="kpi-grid" id="home-kpis"></div>
+  <div id="home-compromisos"></div>
+  <div class="section">
+    <div class="section-title">Últimos gastos</div>
+    <div id="home-ultimos-gastos"></div>
+  </div>
+</div>
+
+<!-- GASTOS -->
+<div class="page" id="page-gastos">
+  <div class="header">
+    <div class="header-title">💸 Gastos</div>
+  </div>
+  <div style="padding:14px">
+    <div class="kpi-grid" style="padding:0;margin-bottom:14px" id="gastos-kpis"></div>
+    <div class="section-title">Por categoría</div>
+    <div class="card" id="gastos-por-categoria" style="margin-bottom:14px"></div>
+    <div class="section-title">Historial</div>
+    <div id="gastos-lista"></div>
+  </div>
+</div>
+<button class="fab" id="fab-gastos" style="display:none" onclick="abrirModalGasto()">＋</button>
+
+<!-- CUENTAS -->
+<div class="page" id="page-cuentas">
+  <div class="header"><div class="header-title">🏦 Cuentas</div></div>
+  <div style="padding:14px">
+    <div class="section-title">Cajas de ahorro / cuentas</div>
+    <div id="cuentas-lista"></div>
+    <button class="btn-ghost" onclick="abrirModalCuenta()">+ Agregar cuenta</button>
+    <div class="section-title" style="margin-top:16px">Tarjetas de crédito</div>
+    <div id="tarjetas-lista"></div>
+    <button class="btn-ghost" onclick="abrirModalTarjeta()">+ Agregar tarjeta</button>
+    <div class="section-title" style="margin-top:16px">Préstamos</div>
+    <div id="prestamos-lista"></div>
+    <button class="btn-ghost" onclick="abrirModalPrestamo()">+ Agregar préstamo</button>
+  </div>
+</div>
+
+<!-- VIAJES -->
+<div class="page" id="page-viajes">
+  <div class="header"><div class="header-title">✈️ Viajes</div></div>
+  <div style="padding:14px" id="viajes-lista"></div>
+</div>
+<button class="fab" id="fab-viajes" style="display:none" onclick="abrirModalViaje()">＋</button>
+
+<!-- MAS -->
+<div class="page" id="page-mas">
+  <div class="header"><div class="header-title">📋 Más</div></div>
+  <div style="padding:14px;display:flex;flex-direction:column;gap:10px">
+    <button class="admin-menu-btn" onclick="navGo('inversiones',document.getElementById('nav-mas'))">
+      <span class="admin-menu-icon">📈</span>
+      <span class="admin-menu-txt"><span class="admin-menu-titulo">Inversiones</span><span class="admin-menu-sub" id="mas-inv-sub">—</span></span>
+      <span class="admin-menu-arrow">›</span>
+    </button>
+    <button class="admin-menu-btn" onclick="navGo('proyectos',document.getElementById('nav-mas'))">
+      <span class="admin-menu-icon">🎯</span>
+      <span class="admin-menu-txt"><span class="admin-menu-titulo">Proyectos</span><span class="admin-menu-sub" id="mas-proy-sub">—</span></span>
+      <span class="admin-menu-arrow">›</span>
+    </button>
+    <button class="admin-menu-btn" onclick="navGo('compromisos',document.getElementById('nav-mas'))">
+      <span class="admin-menu-icon">📅</span>
+      <span class="admin-menu-txt"><span class="admin-menu-titulo">Compromisos</span><span class="admin-menu-sub" id="mas-comp-sub">—</span></span>
+      <span class="admin-menu-arrow">›</span>
+    </button>
+    <div class="sep"></div>
+    <button class="admin-menu-btn" onclick="abrirModalTipoCambio()">
+      <span class="admin-menu-icon">💱</span>
+      <span class="admin-menu-txt"><span class="admin-menu-titulo">Tipo de cambio</span><span class="admin-menu-sub" id="mas-tc-sub">1 USD = — ARS</span></span>
+      <span class="admin-menu-arrow">›</span>
+    </button>
+    <div id="mas-backup-status" style="font-size:11px;text-align:center;margin-bottom:2px"></div>
+    <button class="admin-menu-btn" onclick="exportarDatos()">
+      <span class="admin-menu-icon">📦</span>
+      <span class="admin-menu-txt"><span class="admin-menu-titulo">Exportar backup</span><span class="admin-menu-sub">Descarga cifrada de todos tus datos</span></span>
+      <span class="admin-menu-arrow">›</span>
+    </button>
+    <label class="admin-menu-btn" style="cursor:pointer">
+      <span class="admin-menu-icon">📥</span>
+      <span class="admin-menu-txt"><span class="admin-menu-titulo">Importar backup</span><span class="admin-menu-sub">Reemplaza todos los datos actuales</span></span>
+      <span class="admin-menu-arrow">›</span>
+      <input type="file" accept=".ffbak,.json" style="display:none" onchange="importarDatos(event)">
+    </label>
+    <button class="admin-menu-btn" id="btn-huella-toggle" onclick="toggleHuella()">
+      <span class="admin-menu-icon">👆</span>
+      <span class="admin-menu-txt"><span class="admin-menu-titulo" id="huella-toggle-titulo">Activar huella / Face ID</span><span class="admin-menu-sub">Atajo de acceso en este dispositivo</span></span>
+      <span class="admin-menu-arrow">›</span>
+    </button>
+    <button class="admin-menu-btn" onclick="cerrarSesion()">
+      <span class="admin-menu-icon">🔒</span>
+      <span class="admin-menu-txt"><span class="admin-menu-titulo" style="color:var(--red)">Bloquear app</span><span class="admin-menu-sub">Volver a pedir contraseña</span></span>
+      <span class="admin-menu-arrow">›</span>
+    </button>
+  </div>
+</div>
+
+<!-- INVERSIONES -->
+<div class="page" id="page-inversiones">
+  <div class="header"><div style="display:flex;align-items:center;gap:8px;width:100%"><button class="btn-icon" onclick="navGo('mas',document.getElementById('nav-mas'))">←</button><div class="header-title">📈 Inversiones</div></div></div>
+  <div style="padding:14px" id="inversiones-lista"></div>
+</div>
+<button class="fab" id="fab-inversiones" style="display:none" onclick="abrirModalInversion()">＋</button>
+
+<!-- PROYECTOS -->
+<div class="page" id="page-proyectos">
+  <div class="header"><div style="display:flex;align-items:center;gap:8px;width:100%"><button class="btn-icon" onclick="navGo('mas',document.getElementById('nav-mas'))">←</button><div class="header-title">🎯 Proyectos</div></div></div>
+  <div style="padding:14px" id="proyectos-lista"></div>
+</div>
+<button class="fab" id="fab-proyectos" style="display:none" onclick="abrirModalProyecto()">＋</button>
+
+<!-- COMPROMISOS -->
+<div class="page" id="page-compromisos">
+  <div class="header"><div style="display:flex;align-items:center;gap:8px;width:100%"><button class="btn-icon" onclick="navGo('mas',document.getElementById('nav-mas'))">←</button><div class="header-title">📅 Compromisos</div></div></div>
+  <div style="padding:14px" id="compromisos-lista"></div>
+</div>
+<button class="fab" id="fab-compromisos" style="display:none" onclick="abrirModalCompromiso()">＋</button>
+
+<!-- MODAL GASTO -->
+<div class="modal-overlay" id="modal-gasto" onclick="if(event.target===this)cerrarModal('gasto')">
+  <div class="modal">
+    <div class="modal-title" id="modal-gasto-title">Nuevo gasto</div>
+    <input type="hidden" id="g-id">
+    <div class="field-wrap">
+      <div class="field-label">Foto de factura (opcional)</div>
+      <div id="g-foto-preview" style="width:100%;height:120px;border-radius:12px;background:var(--bg3);border:1px dashed var(--border);display:flex;align-items:center;justify-content:center;color:var(--text3);font-size:13px;overflow:hidden;background-size:cover;background-position:center;margin-bottom:8px">Sin foto</div>
+      <label class="btn-ghost" style="display:block;text-align:center;margin-bottom:0">📷 Sacar / elegir foto<input type="file" accept="image/*" capture="environment" style="display:none" id="g-foto-input" onchange="onFotoGastoSeleccionada(event)"></label>
+    </div>
+    <div class="field-wrap"><div class="field-label">Fecha</div><input type="date" class="input" id="g-fecha"></div>
+    <div class="field-wrap"><div class="field-label">Descripción</div><input type="text" class="input" id="g-desc" placeholder="Ej: Supermercado, nafta, cena..."></div>
+    <div class="field-wrap">
+      <div class="field-label">Categoría</div>
+      <div class="pill-sel" id="g-cat-pills"></div>
+    </div>
+    <div class="field-wrap">
+      <div class="field-label">Moneda</div>
+      <div class="moneda-toggle"><button id="g-mon-ars" class="on" onclick="setMonedaGasto('ARS')">$ ARS</button><button id="g-mon-usd" onclick="setMonedaGasto('USD')">US$ USD</button></div>
+    </div>
+    <div class="field-wrap"><div class="field-label">Monto</div><input type="number" class="input" id="g-monto" placeholder="0" min="0" step="0.01"></div>
+    <div class="field-wrap">
+      <div class="field-label">Método de pago</div>
+      <select class="input" id="g-metodo">
+        <option value="efectivo">Efectivo</option>
+        <option value="debito">Débito</option>
+        <option value="credito">Crédito</option>
+        <option value="transferencia">Transferencia</option>
+      </select>
+    </div>
+    <button class="btn-primary" onclick="guardarGasto()">Guardar gasto</button>
+    <button class="btn-danger" id="btn-borrar-gasto" onclick="borrarGasto()" style="display:none">🗑 Borrar gasto</button>
+    <button class="btn-ghost" onclick="cerrarModal('gasto')">Cancelar</button>
+  </div>
+</div>
+
+<!-- MODAL CUENTA -->
+<div class="modal-overlay" id="modal-cuenta" onclick="if(event.target===this)cerrarModal('cuenta')">
+  <div class="modal">
+    <div class="modal-title" id="modal-cuenta-title">Nueva cuenta</div>
+    <input type="hidden" id="cu-id">
+    <div class="field-wrap"><div class="field-label">Nombre / Banco</div><input type="text" class="input" id="cu-nombre" placeholder="Ej: Caja de ahorro Galicia"></div>
+    <div class="field-wrap">
+      <div class="field-label">Moneda</div>
+      <div class="moneda-toggle"><button id="cu-mon-ars" class="on" onclick="setMonedaCuenta('ARS')">$ ARS</button><button id="cu-mon-usd" onclick="setMonedaCuenta('USD')">US$ USD</button></div>
+    </div>
+    <div class="field-wrap"><div class="field-label">Saldo actual</div><input type="number" class="input" id="cu-saldo" placeholder="0" step="0.01"></div>
+    <button class="btn-primary" onclick="guardarCuenta()">Guardar cuenta</button>
+    <button class="btn-danger" id="btn-borrar-cuenta" onclick="borrarCuenta()" style="display:none">🗑 Borrar cuenta</button>
+    <button class="btn-ghost" onclick="cerrarModal('cuenta')">Cancelar</button>
+  </div>
+</div>
+
+<!-- MODAL TARJETA -->
+<div class="modal-overlay" id="modal-tarjeta" onclick="if(event.target===this)cerrarModal('tarjeta')">
+  <div class="modal">
+    <div class="modal-title" id="modal-tarjeta-title">Nueva tarjeta</div>
+    <input type="hidden" id="ta-id">
+    <div class="field-wrap"><div class="field-label">Nombre / Banco</div><input type="text" class="input" id="ta-nombre" placeholder="Ej: Visa Galicia"></div>
+    <div class="field-wrap">
+      <div class="field-label">Moneda</div>
+      <div class="moneda-toggle"><button id="ta-mon-ars" class="on" onclick="setMonedaTarjeta('ARS')">$ ARS</button><button id="ta-mon-usd" onclick="setMonedaTarjeta('USD')">US$ USD</button></div>
+    </div>
+    <div class="field-wrap"><div class="field-label">Límite</div><input type="number" class="input" id="ta-limite" placeholder="0" step="0.01"></div>
+    <div class="field-wrap"><div class="field-label">Saldo usado</div><input type="number" class="input" id="ta-saldo" placeholder="0" step="0.01"></div>
+    <div class="field-wrap"><div class="field-label">Día de cierre</div><input type="number" class="input" id="ta-cierre" min="1" max="31" placeholder="Ej: 15"></div>
+    <div class="field-wrap"><div class="field-label">Día de vencimiento</div><input type="number" class="input" id="ta-vencimiento" min="1" max="31" placeholder="Ej: 22"></div>
+    <button class="btn-primary" onclick="guardarTarjeta()">Guardar tarjeta</button>
+    <button class="btn-danger" id="btn-borrar-tarjeta" onclick="borrarTarjeta()" style="display:none">🗑 Borrar tarjeta</button>
+    <button class="btn-ghost" onclick="cerrarModal('tarjeta')">Cancelar</button>
+  </div>
+</div>
+
+<!-- MODAL PRESTAMO -->
+<div class="modal-overlay" id="modal-prestamo" onclick="if(event.target===this)cerrarModal('prestamo')">
+  <div class="modal">
+    <div class="modal-title" id="modal-prestamo-title">Nuevo préstamo</div>
+    <input type="hidden" id="pr-id">
+    <div class="field-wrap">
+      <div class="field-label">Tipo</div>
+      <div class="moneda-toggle"><button id="pr-tipo-preste" class="on" onclick="setTipoPrestamo('preste')">Yo presté</button><button id="pr-tipo-meprestaron" onclick="setTipoPrestamo('me_prestaron')">Me prestaron</button></div>
+    </div>
+    <div class="field-wrap"><div class="field-label">Persona</div><input type="text" class="input" id="pr-persona" placeholder="¿A quién / quién te prestó?"></div>
+    <div class="field-wrap">
+      <div class="field-label">Moneda</div>
+      <div class="moneda-toggle"><button id="pr-mon-ars" class="on" onclick="setMonedaPrestamo('ARS')">$ ARS</button><button id="pr-mon-usd" onclick="setMonedaPrestamo('USD')">US$ USD</button></div>
+    </div>
+    <div class="field-wrap"><div class="field-label">Monto</div><input type="number" class="input" id="pr-monto" placeholder="0" step="0.01"></div>
+    <div class="field-wrap"><div class="field-label">Fecha</div><input type="date" class="input" id="pr-fecha"></div>
+    <div class="field-wrap"><button type="button" class="pill" id="pr-pagado-toggle" onclick="togglePrestamoPagado()" style="width:100%;text-align:center">⬜ Sin saldar</button></div>
+    <button class="btn-primary" onclick="guardarPrestamo()">Guardar préstamo</button>
+    <button class="btn-danger" id="btn-borrar-prestamo" onclick="borrarPrestamo()" style="display:none">🗑 Borrar préstamo</button>
+    <button class="btn-ghost" onclick="cerrarModal('prestamo')">Cancelar</button>
+  </div>
+</div>
+
+<!-- MODAL COMPROMISO -->
+<div class="modal-overlay" id="modal-compromiso" onclick="if(event.target===this)cerrarModal('compromiso')">
+  <div class="modal">
+    <div class="modal-title" id="modal-compromiso-title">Nuevo compromiso</div>
+    <input type="hidden" id="co-id">
+    <div class="field-wrap"><div class="field-label">Nombre</div><input type="text" class="input" id="co-nombre" placeholder="Ej: Alquiler, Netflix, cuota colegio..."></div>
+    <div class="field-wrap">
+      <div class="field-label">Moneda</div>
+      <div class="moneda-toggle"><button id="co-mon-ars" class="on" onclick="setMonedaCompromiso('ARS')">$ ARS</button><button id="co-mon-usd" onclick="setMonedaCompromiso('USD')">US$ USD</button></div>
+    </div>
+    <div class="field-wrap"><div class="field-label">Monto</div><input type="number" class="input" id="co-monto" placeholder="0" step="0.01"></div>
+    <div class="field-wrap">
+      <div class="field-label">Frecuencia</div>
+      <select class="input" id="co-frecuencia">
+        <option value="mensual">Mensual</option>
+        <option value="anual">Anual</option>
+        <option value="unica">Única vez</option>
+      </select>
+    </div>
+    <div class="field-wrap"><div class="field-label">Próximo vencimiento</div><input type="date" class="input" id="co-vencimiento"></div>
+    <button class="btn-primary" onclick="guardarCompromiso()">Guardar compromiso</button>
+    <button class="btn-danger" id="btn-borrar-compromiso" onclick="borrarCompromiso()" style="display:none">🗑 Borrar compromiso</button>
+    <button class="btn-ghost" onclick="cerrarModal('compromiso')">Cancelar</button>
+  </div>
+</div>
+
+<!-- MODAL INVERSION -->
+<div class="modal-overlay" id="modal-inversion" onclick="if(event.target===this)cerrarModal('inversion')">
+  <div class="modal">
+    <div class="modal-title" id="modal-inversion-title">Nueva inversión</div>
+    <input type="hidden" id="in-id">
+    <div class="field-wrap"><div class="field-label">Nombre</div><input type="text" class="input" id="in-nombre" placeholder="Ej: Plazo fijo, FCI, cripto, acciones..."></div>
+    <div class="field-wrap">
+      <div class="field-label">Tipo</div>
+      <select class="input" id="in-tipo">
+        <option value="plazo_fijo">Plazo fijo</option>
+        <option value="fci">Fondo común de inversión</option>
+        <option value="acciones">Acciones / bonos</option>
+        <option value="cripto">Criptomonedas</option>
+        <option value="otro">Otro</option>
+      </select>
+    </div>
+    <div class="field-wrap">
+      <div class="field-label">Moneda</div>
+      <div class="moneda-toggle"><button id="in-mon-ars" class="on" onclick="setMonedaInversion('ARS')">$ ARS</button><button id="in-mon-usd" onclick="setMonedaInversion('USD')">US$ USD</button></div>
+    </div>
+    <div class="field-wrap"><div class="field-label">Monto invertido</div><input type="number" class="input" id="in-inicial" placeholder="0" step="0.01"></div>
+    <div class="field-wrap"><div class="field-label">Valor actual</div><input type="number" class="input" id="in-actual" placeholder="0" step="0.01"></div>
+    <div class="field-wrap"><div class="field-label">Fecha</div><input type="date" class="input" id="in-fecha"></div>
+    <button class="btn-primary" onclick="guardarInversion()">Guardar inversión</button>
+    <button class="btn-danger" id="btn-borrar-inversion" onclick="borrarInversion()" style="display:none">🗑 Borrar inversión</button>
+    <button class="btn-ghost" onclick="cerrarModal('inversion')">Cancelar</button>
+  </div>
+</div>
+
+<!-- MODAL PROYECTO -->
+<div class="modal-overlay" id="modal-proyecto" onclick="if(event.target===this)cerrarModal('proyecto')">
+  <div class="modal">
+    <div class="modal-title" id="modal-proyecto-title">Nuevo proyecto</div>
+    <input type="hidden" id="py-id">
+    <div class="field-wrap"><div class="field-label">Nombre</div><input type="text" class="input" id="py-nombre" placeholder="Ej: Reformar la cocina"></div>
+    <div class="field-wrap"><div class="field-label">Descripción (opcional)</div><input type="text" class="input" id="py-desc" placeholder="Notas del proyecto"></div>
+    <div class="field-wrap">
+      <div class="field-label">Moneda</div>
+      <div class="moneda-toggle"><button id="py-mon-ars" class="on" onclick="setMonedaProyecto('ARS')">$ ARS</button><button id="py-mon-usd" onclick="setMonedaProyecto('USD')">US$ USD</button></div>
+    </div>
+    <div class="field-wrap"><div class="field-label">Presupuesto</div><input type="number" class="input" id="py-presupuesto" placeholder="0" step="0.01"></div>
+    <div class="field-wrap"><div class="field-label">Fecha objetivo (opcional)</div><input type="date" class="input" id="py-fecha"></div>
+    <button class="btn-primary" onclick="guardarProyecto()">Guardar proyecto</button>
+    <button class="btn-danger" id="btn-borrar-proyecto" onclick="borrarProyecto()" style="display:none">🗑 Borrar proyecto</button>
+    <button class="btn-ghost" onclick="cerrarModal('proyecto')">Cancelar</button>
+  </div>
+</div>
+
+<!-- MODAL GASTO DE PROYECTO -->
+<div class="modal-overlay" id="modal-proyecto-gasto" onclick="if(event.target===this)cerrarModal('proyecto-gasto')">
+  <div class="modal">
+    <div class="modal-title">+ Gasto del proyecto</div>
+    <input type="hidden" id="pyg-proyecto-id">
+    <div class="field-wrap"><div class="field-label">Concepto</div><input type="text" class="input" id="pyg-concepto" placeholder="Ej: Azulejos, mano de obra..."></div>
+    <div class="field-wrap"><div class="field-label">Monto</div><input type="number" class="input" id="pyg-monto" placeholder="0" step="0.01"></div>
+    <button class="btn-primary" onclick="guardarGastoProyecto()">Agregar</button>
+    <button class="btn-ghost" onclick="cerrarModal('proyecto-gasto')">Cancelar</button>
+  </div>
+</div>
+
+<!-- MODAL VIAJE -->
+<div class="modal-overlay" id="modal-viaje" onclick="if(event.target===this)cerrarModal('viaje')">
+  <div class="modal">
+    <div class="modal-title" id="modal-viaje-title">Nuevo viaje</div>
+    <input type="hidden" id="vj-id">
+    <div class="field-wrap"><div class="field-label">Destino</div><input type="text" class="input" id="vj-destino" placeholder="Ej: Bariloche"></div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+      <div class="field-wrap"><div class="field-label">Fecha inicio</div><input type="date" class="input" id="vj-inicio"></div>
+      <div class="field-wrap"><div class="field-label">Fecha fin</div><input type="date" class="input" id="vj-fin"></div>
+    </div>
+    <div class="field-wrap">
+      <div class="field-label">Compañeros de viaje (para repartir gastos)</div>
+      <div id="vj-companeros-lista" style="display:flex;flex-direction:column;gap:6px;margin-bottom:8px"></div>
+      <div style="display:flex;gap:6px">
+        <input type="text" class="input" id="vj-companero-nuevo" placeholder="Nombre" style="flex:1" onkeydown="if(event.key==='Enter'){event.preventDefault();agregarCompanero();}">
+        <button type="button" class="btn-ghost" style="width:auto;padding:0 16px;margin-bottom:0" onclick="agregarCompanero()">+</button>
+      </div>
+    </div>
+    <button class="btn-primary" onclick="guardarViaje()">Guardar viaje</button>
+    <button class="btn-danger" id="btn-borrar-viaje" onclick="borrarViaje()" style="display:none">🗑 Borrar viaje</button>
+    <button class="btn-ghost" onclick="cerrarModal('viaje')">Cancelar</button>
+  </div>
+</div>
+
+<!-- MODAL ITEM DE VIAJE -->
+<div class="modal-overlay" id="modal-viaje-item" onclick="if(event.target===this)cerrarModal('viaje-item')">
+  <div class="modal">
+    <div class="modal-title">+ Gasto del viaje</div>
+    <input type="hidden" id="vi-viaje-id">
+    <div class="field-wrap">
+      <div class="field-label">Rubro</div>
+      <div class="pill-sel" id="vi-rubro-pills"></div>
+    </div>
+    <div class="field-wrap"><div class="field-label">Nota (opcional)</div><input type="text" class="input" id="vi-nota" placeholder="Ej: Pasaje ida, hotel 3 noches..."></div>
+    <div class="field-wrap">
+      <div class="field-label">Moneda</div>
+      <div class="moneda-toggle"><button id="vi-mon-ars" class="on" onclick="setMonedaViajeItem('ARS')">$ ARS</button><button id="vi-mon-usd" onclick="setMonedaViajeItem('USD')">US$ USD</button></div>
+    </div>
+    <div class="field-wrap"><div class="field-label">Monto</div><input type="number" class="input" id="vi-monto" placeholder="0" step="0.01"></div>
+    <div class="field-wrap" id="vi-reparto-wrap" style="display:none">
+      <div class="field-label">Pagado por</div>
+      <select class="input" id="vi-pagador" style="margin-bottom:10px"></select>
+      <div class="field-label">Se reparte entre</div>
+      <div class="pill-sel" id="vi-participantes-pills"></div>
+    </div>
+    <button class="btn-primary" onclick="guardarViajeItem()">Agregar gasto</button>
+    <button class="btn-danger" id="btn-borrar-viaje-item" onclick="borrarViajeItem()" style="display:none">🗑 Borrar gasto</button>
+    <button class="btn-ghost" onclick="cerrarModal('viaje-item')">Cancelar</button>
+  </div>
+</div>
+
+<!-- MODAL DETALLE DE VIAJE -->
+<div class="modal-overlay" id="modal-viaje-detalle" onclick="if(event.target===this)cerrarModal('viaje-detalle')">
+  <div class="modal" style="max-height:92dvh">
+    <div class="modal-title" id="vd-titulo">Viaje</div>
+    <div id="vd-resumen" style="margin-bottom:10px"></div>
+    <div id="vd-balance"></div>
+    <div id="vd-sugerencias"></div>
+    <div class="section-title" style="margin-top:14px">Gastos del viaje</div>
+    <div id="vd-items"></div>
+    <button class="btn-primary" onclick="abrirModalViajeItem(document.getElementById('vd-titulo').dataset.viajeId)">+ Agregar gasto</button>
+    <button class="btn-ghost" onclick="cerrarModal('viaje-detalle')">Cerrar</button>
+  </div>
+</div>
+
+<!-- MODAL TIPO DE CAMBIO -->
+<div class="modal-overlay" id="modal-tipocambio" onclick="if(event.target===this)cerrarModal('tipocambio')">
+  <div class="modal">
+    <div class="modal-title">💱 Tipo de cambio</div>
+    <div class="field-wrap"><div class="field-label">1 USD = cuántos ARS</div><input type="number" class="input" id="tc-valor" placeholder="Ej: 1200" step="0.01"></div>
+    <div style="font-size:11px;color:var(--text3);margin-bottom:14px">Se usa solo para mostrar un total consolidado en Inicio — no afecta los montos guardados en cada moneda.</div>
+    <button class="btn-primary" onclick="guardarTipoCambio()">Guardar</button>
+    <button class="btn-ghost" onclick="cerrarModal('tipocambio')">Cancelar</button>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+// ═══════════════════════════════════════════════════════════════
+// CRIPTOGRAFÍA — AES-256-GCM con clave derivada de la contraseña (PBKDF2)
+// ═══════════════════════════════════════════════════════════════
+function _bufToB64(buf){ return btoa(String.fromCharCode(...new Uint8Array(buf))); }
+function _b64ToBuf(b64){ return Uint8Array.from(atob(b64), c=>c.charCodeAt(0)); }
+
+async function _deriveKey(password, saltB64){
+  const enc=new TextEncoder();
+  const salt=_b64ToBuf(saltB64);
+  const keyMaterial=await crypto.subtle.importKey('raw', enc.encode(password), 'PBKDF2', false, ['deriveKey']);
+  return crypto.subtle.deriveKey(
+    {name:'PBKDF2', salt, iterations:150000, hash:'SHA-256'},
+    keyMaterial,
+    {name:'AES-GCM', length:256},
+    true,
+    ['encrypt','decrypt']
+  );
+}
+async function _encryptJSON(obj, key){
+  const iv=crypto.getRandomValues(new Uint8Array(12));
+  const enc=new TextEncoder().encode(JSON.stringify(obj));
+  const ct=await crypto.subtle.encrypt({name:'AES-GCM', iv}, key, enc);
+  return { iv:_bufToB64(iv), data:_bufToB64(new Uint8Array(ct)) };
+}
+async function _decryptJSON(payload, key){
+  const iv=_b64ToBuf(payload.iv);
+  const data=_b64ToBuf(payload.data);
+  const pt=await crypto.subtle.decrypt({name:'AES-GCM', iv}, key, data);
+  return JSON.parse(new TextDecoder().decode(pt));
+}
+
+// ═══════════════════════════════════════════════════════════════
+// STORAGE
+// ═══════════════════════════════════════════════════════════════
+let _key=null;
+let DB=null;
+
+function _dbVacia(){
+  return {
+    perfil:{nombre:'',email:'',tipoCambio:null},
+    gastos:[], cuentas:[], tarjetas:[], prestamos:[], compromisos:[],
+    inversiones:[], proyectos:[], viajes:[],
+    ultimoBackup:null,
+  };
+}
+
+async function save(){
+  if(!_key||!DB) return;
+  const blob=await _encryptJSON(DB, _key);
+  localStorage.setItem('ff_blob', JSON.stringify(blob));
+}
+
+// ═══════════════════════════════════════════════════════════════
+// AUTH
+// ═══════════════════════════════════════════════════════════════
+function showErrAuth(id,msg){ const el=document.getElementById(id); el.textContent=msg; el.style.display='block'; }
+function hideErrAuth(id){ document.getElementById(id).style.display='none'; }
+
+async function crearCuenta(){
+  hideErrAuth('ac-err');
+  const nombre=document.getElementById('ac-nombre').value.trim();
+  const email=document.getElementById('ac-email').value.trim();
+  const pass=document.getElementById('ac-pass').value;
+  const pass2=document.getElementById('ac-pass2').value;
+  if(!nombre||!email||!pass){ showErrAuth('ac-err','Completá todos los campos'); return; }
+  if(pass.length<6){ showErrAuth('ac-err','La contraseña debe tener al menos 6 caracteres'); return; }
+  if(pass!==pass2){ showErrAuth('ac-err','Las contraseñas no coinciden'); return; }
+  const salt=crypto.getRandomValues(new Uint8Array(16));
+  const saltB64=_bufToB64(salt);
+  _key=await _deriveKey(pass, saltB64);
+  DB=_dbVacia();
+  DB.perfil.nombre=nombre; DB.perfil.email=email;
+  localStorage.setItem('ff_salt', saltB64);
+  localStorage.setItem('ff_email', email);
+  localStorage.setItem('ff_nombre', nombre);
+  await save();
+  onDesbloqueado();
+  toast('✅ Cuenta creada');
+}
+
+async function ingresar(){
+  hideErrAuth('ai-err');
+  const pass=document.getElementById('ai-pass').value;
+  if(!pass){ showErrAuth('ai-err','Ingresá tu contraseña'); return; }
+  try{
+    const saltB64=localStorage.getItem('ff_salt');
+    const key=await _deriveKey(pass, saltB64);
+    const blob=JSON.parse(localStorage.getItem('ff_blob'));
+    const data=await _decryptJSON(blob, key);
+    _key=key; DB=data;
+    onDesbloqueado();
+  }catch(e){
+    showErrAuth('ai-err','Contraseña incorrecta');
+  }
+}
+
+async function registrarHuella(){
+  const challenge=crypto.getRandomValues(new Uint8Array(32));
+  return navigator.credentials.create({
+    publicKey:{
+      challenge,
+      rp:{name:'Frigurso Finanzas'},
+      user:{id:crypto.getRandomValues(new Uint8Array(16)), name:(DB.perfil.email||'usuario'), displayName:(DB.perfil.nombre||'Usuario')},
+      pubKeyCredParams:[{type:'public-key',alg:-7},{type:'public-key',alg:-257}],
+      authenticatorSelection:{authenticatorAttachment:'platform', userVerification:'required'},
+      timeout:60000,
+    }
+  });
+}
+async function verificarHuella(credIdB64){
+  const challenge=crypto.getRandomValues(new Uint8Array(32));
+  const credId=_b64ToBuf(credIdB64);
+  return navigator.credentials.get({
+    publicKey:{challenge, allowCredentials:[{id:credId,type:'public-key'}], userVerification:'required', timeout:60000}
+  });
+}
+
+async function toggleHuella(){
+  if(localStorage.getItem('ff_passkey_id')){
+    if(!confirm('¿Desactivar el acceso por huella en este dispositivo?')) return;
+    localStorage.removeItem('ff_passkey_id');
+    localStorage.removeItem('ff_unlock_shortcut');
+    actualizarBotonHuella();
+    toast('Huella desactivada');
+    return;
+  }
+  if(!window.PublicKeyCredential){ toast('Este dispositivo no soporta huella/Face ID'); return; }
+  try{
+    const cred=await registrarHuella();
+    const credIdB64=_bufToB64(new Uint8Array(cred.rawId));
+    const rawKey=await crypto.subtle.exportKey('raw', _key);
+    localStorage.setItem('ff_passkey_id', credIdB64);
+    localStorage.setItem('ff_unlock_shortcut', _bufToB64(new Uint8Array(rawKey)));
+    actualizarBotonHuella();
+    toast('👆 Huella activada');
+  }catch(e){ toast('No se pudo activar la huella'); }
+}
+
+async function ingresarConHuella(){
+  const credId=localStorage.getItem('ff_passkey_id');
+  if(!credId) return;
+  try{
+    await verificarHuella(credId);
+    const rawKeyB64=localStorage.getItem('ff_unlock_shortcut');
+    const rawKey=_b64ToBuf(rawKeyB64);
+    _key=await crypto.subtle.importKey('raw', rawKey, {name:'AES-GCM'}, true, ['encrypt','decrypt']);
+    const blob=JSON.parse(localStorage.getItem('ff_blob'));
+    DB=await _decryptJSON(blob, _key);
+    onDesbloqueado();
+  }catch(e){ toast('No se pudo verificar la huella'); }
+}
+
+function actualizarBotonHuella(){
+  const activo=!!localStorage.getItem('ff_passkey_id');
+  const t=document.getElementById('huella-toggle-titulo');
+  if(t) t.textContent=activo?'Desactivar huella / Face ID':'Activar huella / Face ID';
+}
+
+function cerrarSesion(){
+  _key=null; DB=null;
+  document.getElementById('navbar').style.display='none';
+  document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
+  document.getElementById('page-home').classList.add('active');
+  document.getElementById('ai-pass').value='';
+  initAuth();
+  document.getElementById('auth-screen').style.display='flex';
+}
+
+function resetearTodo(){
+  localStorage.clear();
+  location.reload();
+}
+
+function onDesbloqueado(){
+  document.getElementById('auth-screen').style.display='none';
+  document.getElementById('navbar').style.display='flex';
+  actualizarBotonHuella();
+  renderHome();
+}
+
+function initAuth(){
+  const salt=localStorage.getItem('ff_salt');
+  document.getElementById('auth-sub').textContent=salt?'Ingresá para continuar':'Creá tu cuenta para empezar';
+  document.getElementById('auth-crear').style.display=salt?'none':'block';
+  document.getElementById('auth-ingresar').style.display=salt?'block':'none';
+  document.getElementById('btn-huella-login').style.display=(salt&&localStorage.getItem('ff_passkey_id'))?'block':'none';
+}
+
+// ═══════════════════════════════════════════════════════════════
+// UTILS
+// ═══════════════════════════════════════════════════════════════
+function uid(){ return Date.now().toString(36)+Math.random().toString(36).slice(2,6); }
+function esc(s){ return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+function fmtMoney(n,moneda){
+  const v=Math.round((n||0)*100)/100;
+  const signo=moneda==='USD'?'US$':'$';
+  return signo+v.toLocaleString('es-AR',{minimumFractionDigits:0,maximumFractionDigits:2});
+}
+function fmtFecha(s){ if(!s) return ''; const [y,m,d]=s.split('-'); return d+'/'+m+'/'+y; }
+function fechaHoy(){ const n=new Date(); return `${n.getFullYear()}-${String(n.getMonth()+1).padStart(2,'0')}-${String(n.getDate()).padStart(2,'0')}`; }
+let _toastT;
+function toast(msg){ const el=document.getElementById('toast'); el.textContent=msg; el.classList.add('show'); clearTimeout(_toastT); _toastT=setTimeout(()=>el.classList.remove('show'),2600); }
+function abrirModal(id){ document.getElementById('modal-'+id).classList.add('open'); }
+function cerrarModal(id){ document.getElementById('modal-'+id).classList.remove('open'); }
+
+const CATEGORIAS_GASTO=[
+  {id:'comida',label:'🍔 Comida'},
+  {id:'transporte',label:'🚗 Transporte'},
+  {id:'vivienda',label:'🏠 Vivienda'},
+  {id:'salud',label:'💊 Salud'},
+  {id:'entretenimiento',label:'🎬 Entretenimiento'},
+  {id:'ropa',label:'👕 Ropa'},
+  {id:'educacion',label:'📚 Educación'},
+  {id:'servicios',label:'🧾 Servicios'},
+  {id:'otro',label:'📦 Otro'},
+];
+const RUBROS_VIAJE=[
+  {id:'avion',label:'✈️ Avión'},
+  {id:'micro_tren',label:'🚌 Micro/Tren'},
+  {id:'combustible',label:'⛽ Combustible'},
+  {id:'alojamiento',label:'🏨 Alojamiento'},
+  {id:'comida',label:'🍽️ Comida'},
+  {id:'excursion',label:'🎫 Excursión'},
+  {id:'otro',label:'📦 Otro'},
+];
+function catLabel(id){ return (CATEGORIAS_GASTO.find(c=>c.id===id)||CATEGORIAS_GASTO[8]).label; }
+function rubroLabel(id){ return (RUBROS_VIAJE.find(r=>r.id===id)||RUBROS_VIAJE[6]).label; }
+
+// Sugerencia de pagos (algoritmo greedy deudores/acreedores)
+function computeSugerenciasPago(saldo){
+  const acreedores=Object.entries(saldo).filter(([,v])=>v>0.5).map(([n,v])=>({n,monto:v})).sort((a,b)=>b.monto-a.monto);
+  const deudores=Object.entries(saldo).filter(([,v])=>v<-0.5).map(([n,v])=>({n,monto:-v})).sort((a,b)=>b.monto-a.monto);
+  const pagos=[]; let i=0,k=0;
+  while(i<deudores.length&&k<acreedores.length){
+    const d=deudores[i],a=acreedores[k];
+    const monto=Math.min(d.monto,a.monto);
+    if(monto>0.5) pagos.push({de:d.n,a:a.n,monto});
+    d.monto-=monto; a.monto-=monto;
+    if(d.monto<=0.5) i++;
+    if(a.monto<=0.5) k++;
+  }
+  return pagos;
+}
+
+// ═══════════════════════════════════════════════════════════════
+// NAV
+// ═══════════════════════════════════════════════════════════════
+let _pagActual='home';
+function navGo(page,btn){
+  document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
+  document.querySelectorAll('.nav-btn').forEach(b=>b.classList.remove('active'));
+  document.querySelectorAll('.fab').forEach(f=>f.style.display='none');
+  document.getElementById('page-'+page).classList.add('active');
+  if(btn) btn.classList.add('active');
+  _pagActual=page;
+  if(page==='home') renderHome();
+  if(page==='gastos'){ renderGastos(); document.getElementById('fab-gastos').style.display=''; }
+  if(page==='cuentas') renderCuentas();
+  if(page==='viajes'){ renderViajes(); document.getElementById('fab-viajes').style.display=''; }
+  if(page==='mas') renderMas();
+  if(page==='inversiones'){ renderInversiones(); document.getElementById('fab-inversiones').style.display=''; }
+  if(page==='proyectos'){ renderProyectos(); document.getElementById('fab-proyectos').style.display=''; }
+  if(page==='compromisos'){ renderCompromisos(); document.getElementById('fab-compromisos').style.display=''; }
+  window.scrollTo(0,0);
+}
+
+// ═══════════════════════════════════════════════════════════════
+// HOME
+// ═══════════════════════════════════════════════════════════════
+function computeBalanceCuentas(){
+  let ars=0, usd=0;
+  (DB.cuentas||[]).forEach(c=>{ if(c.moneda==='USD') usd+=c.saldo||0; else ars+=c.saldo||0; });
+  (DB.tarjetas||[]).forEach(t=>{ if(t.moneda==='USD') usd-=t.saldoUsado||0; else ars-=t.saldoUsado||0; });
+  return {ars,usd};
+}
+
+function renderHome(){
+  const nombre=(DB.perfil&&DB.perfil.nombre)||'';
+  document.getElementById('home-sub').textContent=nombre?('Hola, '+nombre):'Hola';
+
+  const {ars,usd}=computeBalanceCuentas();
+  const tc=DB.perfil.tipoCambio;
+  const totalConvertido=tc?(ars+usd*tc):ars;
+  document.getElementById('home-balance').textContent=fmtMoney(totalConvertido,'ARS');
+  document.getElementById('home-balance-detalle').textContent='ARS '+fmtMoney(ars,'ARS')+' · USD '+fmtMoney(usd,'USD')+(tc?'':' · sin tipo de cambio configurado');
+
+  const hoy=fechaHoy();
+  const mesActual=hoy.slice(0,7);
+  const gastosMes=(DB.gastos||[]).filter(g=>g.fecha&&g.fecha.slice(0,7)===mesActual);
+  const gastadoArsMes=gastosMes.filter(g=>g.moneda!=='USD').reduce((s,g)=>s+(g.monto||0),0);
+  const gastadoUsdMes=gastosMes.filter(g=>g.moneda==='USD').reduce((s,g)=>s+(g.monto||0),0);
+  const deudaTarjetas=(DB.tarjetas||[]).reduce((s,t)=>s+(t.moneda==='USD'?0:(t.saldoUsado||0)),0);
+  const prestamosPendientes=(DB.prestamos||[]).filter(p=>!p.pagado).length;
+
+  document.getElementById('home-kpis').innerHTML=[
+    ['💸',fmtMoney(gastadoArsMes,'ARS'),'Gastado este mes'],
+    ['💳',fmtMoney(deudaTarjetas,'ARS'),'Deuda en tarjetas'],
+    ['🤝',prestamosPendientes,'Préstamos pendientes'],
+    ['📈',(DB.inversiones||[]).length,'Inversiones activas'],
+  ].map(([icon,val,lbl])=>
+    '<div class="kpi-box"><div class="kpi-val">'+icon+' '+val+'</div><div class="kpi-lbl">'+lbl+'</div></div>'
+  ).join('');
+
+  const proxCompromisos=(DB.compromisos||[]).filter(c=>!c.pagado&&c.vencimiento).sort((a,b)=>a.vencimiento.localeCompare(b.vencimiento)).slice(0,3);
+  const compEl=document.getElementById('home-compromisos');
+  if(proxCompromisos.length){
+    compEl.innerHTML='<div class="section"><div class="section-title">Próximos compromisos</div>'+
+      proxCompromisos.map(c=>{
+        const vencido=c.vencimiento<hoy;
+        return '<div class="row-item" onclick="navGo(\'compromisos\',document.getElementById(\'nav-mas\'))">'+
+          '<div class="row-icon" style="background:'+(vencido?'rgba(248,113,113,.15)':'rgba(212,175,55,.15)')+'">📅</div>'+
+          '<div class="row-main"><div class="row-title">'+esc(c.nombre)+'</div><div class="row-sub" style="color:'+(vencido?'var(--red)':'var(--text3)')+'">'+(vencido?'Vencido ':'Vence ')+fmtFecha(c.vencimiento)+'</div></div>'+
+          '<div class="row-amt"><div class="row-amt-val">'+fmtMoney(c.monto,c.moneda)+'</div></div>'+
+        '</div>';
+      }).join('')+'</div>';
+  } else compEl.innerHTML='';
+
+  const ultimos=[...(DB.gastos||[])].sort((a,b)=>b.fecha.localeCompare(a.fecha)).slice(0,5);
+  document.getElementById('home-ultimos-gastos').innerHTML=ultimos.length?ultimos.map(g=>gastoRowHtml(g)).join(''):
+    '<div class="empty"><div class="empty-icon">💸</div><div class="empty-text">Sin gastos todavía</div><div class="empty-sub">Tocá + para cargar el primero</div></div>';
+}
+
+// ═══════════════════════════════════════════════════════════════
+// GASTOS
+// ═══════════════════════════════════════════════════════════════
+function gastoRowHtml(g){
+  return '<div class="row-item" onclick="abrirModalGasto(\''+g.id+'\')">'+
+    (g.foto?'<div class="row-icon" style="background-image:url('+g.foto+');background-size:cover"></div>':'<div class="row-icon" style="background:rgba(91,107,245,.15)">'+catLabel(g.categoria).split(' ')[0]+'</div>')+
+    '<div class="row-main"><div class="row-title">'+esc(g.desc||catLabel(g.categoria).split(' ').slice(1).join(' '))+'</div>'+
+    '<div class="row-sub">'+fmtFecha(g.fecha)+' · '+catLabel(g.categoria).split(' ').slice(1).join(' ')+'</div></div>'+
+    '<div class="row-amt"><div class="row-amt-val" style="color:var(--red)">-'+fmtMoney(g.monto,g.moneda)+'</div></div>'+
+  '</div>';
+}
+
+function renderGastos(){
+  const gastos=[...(DB.gastos||[])].sort((a,b)=>b.fecha.localeCompare(a.fecha));
+  const hoy=fechaHoy(), mesActual=hoy.slice(0,7);
+  const gastosMes=gastos.filter(g=>g.fecha.slice(0,7)===mesActual);
+  const totalArs=gastosMes.filter(g=>g.moneda!=='USD').reduce((s,g)=>s+(g.monto||0),0);
+  const totalUsd=gastosMes.filter(g=>g.moneda==='USD').reduce((s,g)=>s+(g.monto||0),0);
+  document.getElementById('gastos-kpis').innerHTML=[
+    ['💸',fmtMoney(totalArs,'ARS'),'Este mes (ARS)'],
+    ['💵',fmtMoney(totalUsd,'USD'),'Este mes (USD)'],
+  ].map(([icon,val,lbl])=>'<div class="kpi-box"><div class="kpi-val">'+icon+' '+val+'</div><div class="kpi-lbl">'+lbl+'</div></div>').join('');
+
+  const porCat={};
+  gastosMes.forEach(g=>{ const k=g.categoria+'|'+g.moneda; porCat[k]=(porCat[k]||0)+(g.monto||0); });
+  const entradas=Object.entries(porCat).sort((a,b)=>b[1]-a[1]);
+  const maxVal=entradas.length?entradas[0][1]:1;
+  document.getElementById('gastos-por-categoria').innerHTML=entradas.length?entradas.map(([k,val])=>{
+    const [cat,mon]=k.split('|');
+    const pct=Math.round((val/maxVal)*100);
+    return '<div style="margin-bottom:10px">'+
+      '<div style="display:flex;justify-content:space-between;font-size:12px;margin-bottom:4px"><span>'+catLabel(cat)+'</span><span style="font-family:var(--mono);font-weight:700">'+fmtMoney(val,mon)+'</span></div>'+
+      '<div style="height:6px;border-radius:99px;background:var(--bg3)"><div style="height:100%;width:'+pct+'%;border-radius:99px;background:var(--accent)"></div></div>'+
+    '</div>';
+  }).join('') : '<div style="text-align:center;color:var(--text3);font-size:12px;padding:10px">Sin gastos este mes</div>';
+
+  document.getElementById('gastos-lista').innerHTML=gastos.length?gastos.map(gastoRowHtml).join(''):
+    '<div class="empty"><div class="empty-icon">💸</div><div class="empty-text">Sin gastos</div><div class="empty-sub">Tocá + para cargar uno</div></div>';
+}
+
+let _fotoGastoData=null, _monedaGasto='ARS', _catGasto='comida';
+
+function abrirModalGasto(id){
+  const g=id?DB.gastos.find(x=>x.id===id):null;
+  document.getElementById('g-id').value=g?g.id:'';
+  document.getElementById('g-fecha').value=g?g.fecha:fechaHoy();
+  document.getElementById('g-desc').value=g?(g.desc||''):'';
+  document.getElementById('g-monto').value=g?g.monto:'';
+  document.getElementById('g-metodo').value=g?(g.metodo||'efectivo'):'efectivo';
+  document.getElementById('modal-gasto-title').textContent=g?'Editar gasto':'Nuevo gasto';
+  document.getElementById('btn-borrar-gasto').style.display=g?'':'none';
+  _fotoGastoData=g?(g.foto||null):null;
+  _catGasto=g?g.categoria:'comida';
+  _monedaGasto=g?g.moneda:'ARS';
+  actualizarPreviewFotoGasto();
+  renderCatPills();
+  setMonedaGasto(_monedaGasto);
+  abrirModal('gasto');
+}
+function renderCatPills(){
+  document.getElementById('g-cat-pills').innerHTML=CATEGORIAS_GASTO.map(c=>
+    '<button type="button" class="pill '+(c.id===_catGasto?'sel':'')+'" onclick="_catGasto=\''+c.id+'\';renderCatPills()">'+c.label+'</button>'
+  ).join('');
+}
+function setMonedaGasto(m){
+  _monedaGasto=m;
+  document.getElementById('g-mon-ars').classList.toggle('on',m==='ARS');
+  document.getElementById('g-mon-usd').classList.toggle('on',m==='USD');
+}
+function onFotoGastoSeleccionada(e){
+  const file=e.target.files[0];
+  if(!file) return;
+  const reader=new FileReader();
+  reader.onload=(ev)=>{
+    const img=new Image();
+    img.onload=()=>{
+      const MAX=900;
+      let w=img.width,h=img.height;
+      if(w>h&&w>MAX){h=h*MAX/w;w=MAX;} else if(h>MAX){w=w*MAX/h;h=MAX;}
+      const canvas=document.createElement('canvas');
+      canvas.width=w; canvas.height=h;
+      canvas.getContext('2d').drawImage(img,0,0,w,h);
+      _fotoGastoData=canvas.toDataURL('image/jpeg',0.6);
+      actualizarPreviewFotoGasto();
+    };
+    img.src=ev.target.result;
+  };
+  reader.readAsDataURL(file);
+}
+function actualizarPreviewFotoGasto(){
+  const el=document.getElementById('g-foto-preview');
+  if(_fotoGastoData){ el.style.backgroundImage='url('+_fotoGastoData+')'; el.textContent=''; }
+  else { el.style.backgroundImage=''; el.textContent='Sin foto'; }
+}
+
+async function guardarGasto(){
+  const fecha=document.getElementById('g-fecha').value;
+  const monto=parseFloat(document.getElementById('g-monto').value)||0;
+  if(!fecha||monto<=0){ toast('⚠️ Completá fecha y monto'); return; }
+  const id=document.getElementById('g-id').value;
+  const data={
+    id:id||uid(), fecha,
+    desc:document.getElementById('g-desc').value.trim(),
+    categoria:_catGasto, moneda:_monedaGasto, monto,
+    metodo:document.getElementById('g-metodo').value,
+    foto:_fotoGastoData||null,
+  };
+  if(id){ const idx=DB.gastos.findIndex(g=>g.id===id); if(idx>=0) DB.gastos[idx]=data; }
+  else DB.gastos.push(data);
+  await save(); cerrarModal('gasto'); renderGastos(); if(_pagActual==='home') renderHome();
+  toast('✅ Gasto guardado');
+}
+async function borrarGasto(){
+  const id=document.getElementById('g-id').value;
+  if(!id||!confirm('¿Borrar este gasto?')) return;
+  DB.gastos=DB.gastos.filter(g=>g.id!==id);
+  await save(); cerrarModal('gasto'); renderGastos(); if(_pagActual==='home') renderHome();
+  toast('🗑 Gasto eliminado');
+}
+
+// ═══════════════════════════════════════════════════════════════
+// CUENTAS
+// ═══════════════════════════════════════════════════════════════
+function renderCuentas(){
+  const el=document.getElementById('cuentas-lista');
+  const cuentas=DB.cuentas||[];
+  el.innerHTML=cuentas.length?cuentas.map(c=>
+    '<div class="row-item" onclick="abrirModalCuenta(\''+c.id+'\')">'+
+      '<div class="row-icon" style="background:rgba(34,197,94,.15)">🏦</div>'+
+      '<div class="row-main"><div class="row-title">'+esc(c.nombre)+'</div><div class="row-sub">'+c.moneda+'</div></div>'+
+      '<div class="row-amt"><div class="row-amt-val" style="color:var(--green)">'+fmtMoney(c.saldo,c.moneda)+'</div></div>'+
+    '</div>'
+  ).join(''):'<div style="text-align:center;color:var(--text3);font-size:12px;padding:10px 0">Sin cuentas cargadas</div>';
+
+  const tarjetas=DB.tarjetas||[];
+  document.getElementById('tarjetas-lista').innerHTML=tarjetas.length?tarjetas.map(t=>{
+    const disp=Math.max(0,(t.limite||0)-(t.saldoUsado||0));
+    const pct=t.limite?Math.min(100,Math.round((t.saldoUsado||0)/t.limite*100)):0;
+    return '<div class="row-item" onclick="abrirModalTarjeta(\''+t.id+'\')" style="flex-direction:column;align-items:stretch">'+
+      '<div style="display:flex;align-items:center;gap:12px;width:100%">'+
+        '<div class="row-icon" style="background:rgba(212,175,55,.15)">💳</div>'+
+        '<div class="row-main"><div class="row-title">'+esc(t.nombre)+'</div><div class="row-sub">Cierra día '+ (t.cierre||'—') +' · Vence día '+(t.vencimiento||'—')+'</div></div>'+
+        '<div class="row-amt"><div class="row-amt-val" style="color:var(--red)">'+fmtMoney(t.saldoUsado,t.moneda)+'</div><div class="row-amt-lbl">de '+fmtMoney(t.limite,t.moneda)+'</div></div>'+
+      '</div>'+
+      '<div style="height:5px;border-radius:99px;background:var(--bg3);margin-top:8px"><div style="height:100%;width:'+pct+'%;border-radius:99px;background:'+(pct>85?'var(--red)':'var(--gold)')+'"></div></div>'+
+    '</div>';
+  }).join(''):'<div style="text-align:center;color:var(--text3);font-size:12px;padding:10px 0">Sin tarjetas cargadas</div>';
+
+  const prestamos=DB.prestamos||[];
+  document.getElementById('prestamos-lista').innerHTML=prestamos.length?prestamos.map(p=>{
+    const esPreste=p.tipo==='preste';
+    return '<div class="row-item" onclick="abrirModalPrestamo(\''+p.id+'\')">'+
+      '<div class="row-icon" style="background:'+(esPreste?'rgba(34,197,94,.15)':'rgba(248,113,113,.15)')+'">🤝</div>'+
+      '<div class="row-main"><div class="row-title">'+esc(p.persona)+'</div><div class="row-sub">'+(esPreste?'Yo presté':'Me prestaron')+(p.pagado?' · Saldado':'')+'</div></div>'+
+      '<div class="row-amt"><div class="row-amt-val" style="color:'+(p.pagado?'var(--text3)':(esPreste?'var(--green)':'var(--red)'))+'">'+fmtMoney(p.monto,p.moneda)+'</div></div>'+
+    '</div>';
+  }).join(''):'<div style="text-align:center;color:var(--text3);font-size:12px;padding:10px 0">Sin préstamos cargados</div>';
+}
+
+let _monedaCuenta='ARS';
+function abrirModalCuenta(id){
+  const c=id?DB.cuentas.find(x=>x.id===id):null;
+  document.getElementById('cu-id').value=c?c.id:'';
+  document.getElementById('cu-nombre').value=c?c.nombre:'';
+  document.getElementById('cu-saldo').value=c?c.saldo:'';
+  document.getElementById('modal-cuenta-title').textContent=c?'Editar cuenta':'Nueva cuenta';
+  document.getElementById('btn-borrar-cuenta').style.display=c?'':'none';
+  setMonedaCuenta(c?c.moneda:'ARS');
+  abrirModal('cuenta');
+}
+function setMonedaCuenta(m){ _monedaCuenta=m; document.getElementById('cu-mon-ars').classList.toggle('on',m==='ARS'); document.getElementById('cu-mon-usd').classList.toggle('on',m==='USD'); }
+async function guardarCuenta(){
+  const nombre=document.getElementById('cu-nombre').value.trim();
+  if(!nombre){ toast('⚠️ Ingresá un nombre'); return; }
+  const id=document.getElementById('cu-id').value;
+  const data={id:id||uid(), nombre, moneda:_monedaCuenta, saldo:parseFloat(document.getElementById('cu-saldo').value)||0};
+  if(!DB.cuentas) DB.cuentas=[];
+  if(id){ const idx=DB.cuentas.findIndex(c=>c.id===id); if(idx>=0) DB.cuentas[idx]=data; }
+  else DB.cuentas.push(data);
+  await save(); cerrarModal('cuenta'); renderCuentas(); toast('✅ Cuenta guardada');
+}
+async function borrarCuenta(){
+  const id=document.getElementById('cu-id').value;
+  if(!id||!confirm('¿Borrar esta cuenta?')) return;
+  DB.cuentas=DB.cuentas.filter(c=>c.id!==id);
+  await save(); cerrarModal('cuenta'); renderCuentas(); toast('🗑 Cuenta eliminada');
+}
+
+let _monedaTarjeta='ARS';
+function abrirModalTarjeta(id){
+  const t=id?DB.tarjetas.find(x=>x.id===id):null;
+  document.getElementById('ta-id').value=t?t.id:'';
+  document.getElementById('ta-nombre').value=t?t.nombre:'';
+  document.getElementById('ta-limite').value=t?t.limite:'';
+  document.getElementById('ta-saldo').value=t?t.saldoUsado:'';
+  document.getElementById('ta-cierre').value=t?(t.cierre||''):'';
+  document.getElementById('ta-vencimiento').value=t?(t.vencimiento||''):'';
+  document.getElementById('modal-tarjeta-title').textContent=t?'Editar tarjeta':'Nueva tarjeta';
+  document.getElementById('btn-borrar-tarjeta').style.display=t?'':'none';
+  setMonedaTarjeta(t?t.moneda:'ARS');
+  abrirModal('tarjeta');
+}
+function setMonedaTarjeta(m){ _monedaTarjeta=m; document.getElementById('ta-mon-ars').classList.toggle('on',m==='ARS'); document.getElementById('ta-mon-usd').classList.toggle('on',m==='USD'); }
+async function guardarTarjeta(){
+  const nombre=document.getElementById('ta-nombre').value.trim();
+  if(!nombre){ toast('⚠️ Ingresá un nombre'); return; }
+  const id=document.getElementById('ta-id').value;
+  const data={
+    id:id||uid(), nombre, moneda:_monedaTarjeta,
+    limite:parseFloat(document.getElementById('ta-limite').value)||0,
+    saldoUsado:parseFloat(document.getElementById('ta-saldo').value)||0,
+    cierre:parseInt(document.getElementById('ta-cierre').value)||null,
+    vencimiento:parseInt(document.getElementById('ta-vencimiento').value)||null,
+  };
+  if(!DB.tarjetas) DB.tarjetas=[];
+  if(id){ const idx=DB.tarjetas.findIndex(t=>t.id===id); if(idx>=0) DB.tarjetas[idx]=data; }
+  else DB.tarjetas.push(data);
+  await save(); cerrarModal('tarjeta'); renderCuentas(); toast('✅ Tarjeta guardada');
+}
+async function borrarTarjeta(){
+  const id=document.getElementById('ta-id').value;
+  if(!id||!confirm('¿Borrar esta tarjeta?')) return;
+  DB.tarjetas=DB.tarjetas.filter(t=>t.id!==id);
+  await save(); cerrarModal('tarjeta'); renderCuentas(); toast('🗑 Tarjeta eliminada');
+}
+
+let _monedaPrestamo='ARS', _tipoPrestamo='preste', _pagadoPrestamo=false;
+function abrirModalPrestamo(id){
+  const p=id?DB.prestamos.find(x=>x.id===id):null;
+  document.getElementById('pr-id').value=p?p.id:'';
+  document.getElementById('pr-persona').value=p?p.persona:'';
+  document.getElementById('pr-monto').value=p?p.monto:'';
+  document.getElementById('pr-fecha').value=p?p.fecha:fechaHoy();
+  document.getElementById('modal-prestamo-title').textContent=p?'Editar préstamo':'Nuevo préstamo';
+  document.getElementById('btn-borrar-prestamo').style.display=p?'':'none';
+  setTipoPrestamo(p?p.tipo:'preste');
+  setMonedaPrestamo(p?p.moneda:'ARS');
+  _pagadoPrestamo=p?!!p.pagado:false;
+  renderPrestamoPagadoToggle();
+  abrirModal('prestamo');
+}
+function setTipoPrestamo(t){ _tipoPrestamo=t; document.getElementById('pr-tipo-preste').classList.toggle('on',t==='preste'); document.getElementById('pr-tipo-meprestaron').classList.toggle('on',t==='me_prestaron'); }
+function setMonedaPrestamo(m){ _monedaPrestamo=m; document.getElementById('pr-mon-ars').classList.toggle('on',m==='ARS'); document.getElementById('pr-mon-usd').classList.toggle('on',m==='USD'); }
+function togglePrestamoPagado(){ _pagadoPrestamo=!_pagadoPrestamo; renderPrestamoPagadoToggle(); }
+function renderPrestamoPagadoToggle(){
+  const btn=document.getElementById('pr-pagado-toggle');
+  btn.textContent=_pagadoPrestamo?'✅ Saldado':'⬜ Sin saldar';
+  btn.classList.toggle('sel',_pagadoPrestamo);
+}
+async function guardarPrestamo(){
+  const persona=document.getElementById('pr-persona').value.trim();
+  const monto=parseFloat(document.getElementById('pr-monto').value)||0;
+  if(!persona||monto<=0){ toast('⚠️ Completá persona y monto'); return; }
+  const id=document.getElementById('pr-id').value;
+  const data={id:id||uid(), tipo:_tipoPrestamo, persona, moneda:_monedaPrestamo, monto, fecha:document.getElementById('pr-fecha').value||fechaHoy(), pagado:_pagadoPrestamo};
+  if(!DB.prestamos) DB.prestamos=[];
+  if(id){ const idx=DB.prestamos.findIndex(p=>p.id===id); if(idx>=0) DB.prestamos[idx]=data; }
+  else DB.prestamos.push(data);
+  await save(); cerrarModal('prestamo'); renderCuentas(); if(_pagActual==='home') renderHome();
+  toast('✅ Préstamo guardado');
+}
+async function borrarPrestamo(){
+  const id=document.getElementById('pr-id').value;
+  if(!id||!confirm('¿Borrar este préstamo?')) return;
+  DB.prestamos=DB.prestamos.filter(p=>p.id!==id);
+  await save(); cerrarModal('prestamo'); renderCuentas();
+  toast('🗑 Préstamo eliminado');
+}
+
+// ═══════════════════════════════════════════════════════════════
+// COMPROMISOS
+// ═══════════════════════════════════════════════════════════════
+function renderCompromisos(){
+  const el=document.getElementById('compromisos-lista');
+  const hoy=fechaHoy();
+  const compromisos=[...(DB.compromisos||[])].sort((a,b)=>(a.vencimiento||'9999').localeCompare(b.vencimiento||'9999'));
+  el.innerHTML=compromisos.length?compromisos.map(c=>{
+    const vencido=!c.pagado&&c.vencimiento&&c.vencimiento<hoy;
+    return '<div class="row-item" onclick="abrirModalCompromiso(\''+c.id+'\')">'+
+      '<div class="row-icon" style="background:'+(c.pagado?'rgba(34,197,94,.15)':vencido?'rgba(248,113,113,.15)':'rgba(212,175,55,.15)')+'">'+(c.pagado?'✅':'📅')+'</div>'+
+      '<div class="row-main"><div class="row-title">'+esc(c.nombre)+'</div><div class="row-sub">'+(c.frecuencia==='mensual'?'Mensual':c.frecuencia==='anual'?'Anual':'Única vez')+' · '+(c.vencimiento?fmtFecha(c.vencimiento):'sin fecha')+'</div></div>'+
+      '<div class="row-amt"><div class="row-amt-val" style="color:'+(vencido?'var(--red)':'var(--text)')+'">'+fmtMoney(c.monto,c.moneda)+'</div></div>'+
+    '</div>';
+  }).join(''):'<div class="empty"><div class="empty-icon">📅</div><div class="empty-text">Sin compromisos</div><div class="empty-sub">Tocá + para agregar uno</div></div>';
+}
+let _monedaCompromiso='ARS';
+function abrirModalCompromiso(id){
+  const c=id?DB.compromisos.find(x=>x.id===id):null;
+  document.getElementById('co-id').value=c?c.id:'';
+  document.getElementById('co-nombre').value=c?c.nombre:'';
+  document.getElementById('co-monto').value=c?c.monto:'';
+  document.getElementById('co-frecuencia').value=c?c.frecuencia:'mensual';
+  document.getElementById('co-vencimiento').value=c?(c.vencimiento||''):'';
+  document.getElementById('modal-compromiso-title').textContent=c?'Editar compromiso':'Nuevo compromiso';
+  document.getElementById('btn-borrar-compromiso').style.display=c?'':'none';
+  setMonedaCompromiso(c?c.moneda:'ARS');
+  abrirModal('compromiso');
+}
+function setMonedaCompromiso(m){ _monedaCompromiso=m; document.getElementById('co-mon-ars').classList.toggle('on',m==='ARS'); document.getElementById('co-mon-usd').classList.toggle('on',m==='USD'); }
+async function guardarCompromiso(){
+  const nombre=document.getElementById('co-nombre').value.trim();
+  const monto=parseFloat(document.getElementById('co-monto').value)||0;
+  if(!nombre||monto<=0){ toast('⚠️ Completá nombre y monto'); return; }
+  const id=document.getElementById('co-id').value;
+  const existente=id?DB.compromisos.find(c=>c.id===id):null;
+  const data={id:id||uid(), nombre, moneda:_monedaCompromiso, monto, frecuencia:document.getElementById('co-frecuencia').value, vencimiento:document.getElementById('co-vencimiento').value||null, pagado:existente?existente.pagado:false};
+  if(!DB.compromisos) DB.compromisos=[];
+  if(id){ const idx=DB.compromisos.findIndex(c=>c.id===id); if(idx>=0) DB.compromisos[idx]=data; }
+  else DB.compromisos.push(data);
+  await save(); cerrarModal('compromiso'); renderCompromisos(); if(_pagActual==='home') renderHome();
+  toast('✅ Compromiso guardado');
+}
+async function borrarCompromiso(){
+  const id=document.getElementById('co-id').value;
+  if(!id||!confirm('¿Borrar este compromiso?')) return;
+  DB.compromisos=DB.compromisos.filter(c=>c.id!==id);
+  await save(); cerrarModal('compromiso'); renderCompromisos();
+  toast('🗑 Compromiso eliminado');
+}
+
+// ═══════════════════════════════════════════════════════════════
+// INVERSIONES
+// ═══════════════════════════════════════════════════════════════
+function renderInversiones(){
+  const el=document.getElementById('inversiones-lista');
+  const inv=DB.inversiones||[];
+  el.innerHTML=inv.length?inv.map(i=>{
+    const rendimiento=(i.actual||0)-(i.inicial||0);
+    const pct=i.inicial?Math.round((rendimiento/i.inicial)*1000)/10:0;
+    return '<div class="row-item" onclick="abrirModalInversion(\''+i.id+'\')">'+
+      '<div class="row-icon" style="background:rgba(91,107,245,.15)">📈</div>'+
+      '<div class="row-main"><div class="row-title">'+esc(i.nombre)+'</div><div class="row-sub">'+fmtMoney(i.actual,i.moneda)+' actual</div></div>'+
+      '<div class="row-amt"><div class="row-amt-val" style="color:'+(rendimiento>=0?'var(--green)':'var(--red)')+'">'+(rendimiento>=0?'+':'')+fmtMoney(rendimiento,i.moneda)+'</div><div class="row-amt-lbl">'+(pct>=0?'+':'')+pct+'%</div></div>'+
+    '</div>';
+  }).join(''):'<div class="empty"><div class="empty-icon">📈</div><div class="empty-text">Sin inversiones</div><div class="empty-sub">Tocá + para agregar una</div></div>';
+}
+let _monedaInversion='ARS';
+function abrirModalInversion(id){
+  const i=id?DB.inversiones.find(x=>x.id===id):null;
+  document.getElementById('in-id').value=i?i.id:'';
+  document.getElementById('in-nombre').value=i?i.nombre:'';
+  document.getElementById('in-tipo').value=i?i.tipo:'plazo_fijo';
+  document.getElementById('in-inicial').value=i?i.inicial:'';
+  document.getElementById('in-actual').value=i?i.actual:'';
+  document.getElementById('in-fecha').value=i?i.fecha:fechaHoy();
+  document.getElementById('modal-inversion-title').textContent=i?'Editar inversión':'Nueva inversión';
+  document.getElementById('btn-borrar-inversion').style.display=i?'':'none';
+  setMonedaInversion(i?i.moneda:'ARS');
+  abrirModal('inversion');
+}
+function setMonedaInversion(m){ _monedaInversion=m; document.getElementById('in-mon-ars').classList.toggle('on',m==='ARS'); document.getElementById('in-mon-usd').classList.toggle('on',m==='USD'); }
+async function guardarInversion(){
+  const nombre=document.getElementById('in-nombre').value.trim();
+  if(!nombre){ toast('⚠️ Ingresá un nombre'); return; }
+  const id=document.getElementById('in-id').value;
+  const data={
+    id:id||uid(), nombre, tipo:document.getElementById('in-tipo').value, moneda:_monedaInversion,
+    inicial:parseFloat(document.getElementById('in-inicial').value)||0,
+    actual:parseFloat(document.getElementById('in-actual').value)||0,
+    fecha:document.getElementById('in-fecha').value||fechaHoy(),
+  };
+  if(!DB.inversiones) DB.inversiones=[];
+  if(id){ const idx=DB.inversiones.findIndex(i=>i.id===id); if(idx>=0) DB.inversiones[idx]=data; }
+  else DB.inversiones.push(data);
+  await save(); cerrarModal('inversion'); renderInversiones(); if(_pagActual==='home') renderHome();
+  toast('✅ Inversión guardada');
+}
+async function borrarInversion(){
+  const id=document.getElementById('in-id').value;
+  if(!id||!confirm('¿Borrar esta inversión?')) return;
+  DB.inversiones=DB.inversiones.filter(i=>i.id!==id);
+  await save(); cerrarModal('inversion'); renderInversiones();
+  toast('🗑 Inversión eliminada');
+}
+
+// ═══════════════════════════════════════════════════════════════
+// PROYECTOS
+// ═══════════════════════════════════════════════════════════════
+function renderProyectos(){
+  const el=document.getElementById('proyectos-lista');
+  const proy=DB.proyectos||[];
+  el.innerHTML=proy.length?proy.map(p=>{
+    const gastado=(p.gastos||[]).reduce((s,g)=>s+(g.monto||0),0);
+    const pct=p.presupuesto?Math.min(100,Math.round(gastado/p.presupuesto*100)):0;
+    return '<div class="card" onclick="abrirProyectoDetalle(\''+p.id+'\')" style="cursor:pointer">'+
+      '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px">'+
+        '<div style="font-weight:700;font-size:15px">🎯 '+esc(p.nombre)+'</div>'+
+        '<div style="font-size:12px;color:var(--text3)">'+fmtMoney(gastado,p.moneda)+' / '+fmtMoney(p.presupuesto,p.moneda)+'</div>'+
+      '</div>'+
+      '<div style="height:6px;border-radius:99px;background:var(--bg3)"><div style="height:100%;width:'+pct+'%;border-radius:99px;background:'+(pct>=100?'var(--red)':'var(--accent)')+'"></div></div>'+
+    '</div>';
+  }).join(''):'<div class="empty"><div class="empty-icon">🎯</div><div class="empty-text">Sin proyectos</div><div class="empty-sub">Tocá + para crear uno</div></div>';
+}
+let _monedaProyecto='ARS';
+function abrirModalProyecto(id){
+  const p=id?DB.proyectos.find(x=>x.id===id):null;
+  document.getElementById('py-id').value=p?p.id:'';
+  document.getElementById('py-nombre').value=p?p.nombre:'';
+  document.getElementById('py-desc').value=p?(p.desc||''):'';
+  document.getElementById('py-presupuesto').value=p?p.presupuesto:'';
+  document.getElementById('py-fecha').value=p?(p.fecha||''):'';
+  document.getElementById('modal-proyecto-title').textContent=p?'Editar proyecto':'Nuevo proyecto';
+  document.getElementById('btn-borrar-proyecto').style.display=p?'':'none';
+  setMonedaProyecto(p?p.moneda:'ARS');
+  abrirModal('proyecto');
+}
+function setMonedaProyecto(m){ _monedaProyecto=m; document.getElementById('py-mon-ars').classList.toggle('on',m==='ARS'); document.getElementById('py-mon-usd').classList.toggle('on',m==='USD'); }
+async function guardarProyecto(){
+  const nombre=document.getElementById('py-nombre').value.trim();
+  if(!nombre){ toast('⚠️ Ingresá un nombre'); return; }
+  const id=document.getElementById('py-id').value;
+  const existente=id?DB.proyectos.find(p=>p.id===id):null;
+  const data={
+    id:id||uid(), nombre, desc:document.getElementById('py-desc').value.trim(), moneda:_monedaProyecto,
+    presupuesto:parseFloat(document.getElementById('py-presupuesto').value)||0,
+    fecha:document.getElementById('py-fecha').value||null,
+    gastos: existente?existente.gastos:[],
+  };
+  if(!DB.proyectos) DB.proyectos=[];
+  if(id){ const idx=DB.proyectos.findIndex(p=>p.id===id); if(idx>=0) DB.proyectos[idx]=data; }
+  else DB.proyectos.push(data);
+  await save(); cerrarModal('proyecto'); renderProyectos();
+  toast('✅ Proyecto guardado');
+}
+async function borrarProyecto(){
+  const id=document.getElementById('py-id').value;
+  if(!id||!confirm('¿Borrar este proyecto? Se pierden sus gastos cargados.')) return;
+  DB.proyectos=DB.proyectos.filter(p=>p.id!==id);
+  await save(); cerrarModal('proyecto'); renderProyectos();
+  toast('🗑 Proyecto eliminado');
+}
+function abrirProyectoDetalle(id){
+  abrirModalProyecto(id);
+}
+function abrirModalGastoProyecto(proyectoId){
+  document.getElementById('pyg-proyecto-id').value=proyectoId;
+  document.getElementById('pyg-concepto').value='';
+  document.getElementById('pyg-monto').value='';
+  abrirModal('proyecto-gasto');
+}
+async function guardarGastoProyecto(){
+  const proyectoId=document.getElementById('pyg-proyecto-id').value;
+  const p=DB.proyectos.find(x=>x.id===proyectoId);
+  if(!p) return;
+  const concepto=document.getElementById('pyg-concepto').value.trim();
+  const monto=parseFloat(document.getElementById('pyg-monto').value)||0;
+  if(!concepto||monto<=0){ toast('⚠️ Completá concepto y monto'); return; }
+  if(!p.gastos) p.gastos=[];
+  p.gastos.push({id:uid(),concepto,monto});
+  await save(); cerrarModal('proyecto-gasto'); renderProyectos();
+  toast('✅ Agregado al proyecto');
+}
+
+// ═══════════════════════════════════════════════════════════════
+// VIAJES
+// ═══════════════════════════════════════════════════════════════
+function renderViajes(){
+  const el=document.getElementById('viajes-lista');
+  const viajes=[...(DB.viajes||[])].sort((a,b)=>(b.inicio||'').localeCompare(a.inicio||''));
+  el.innerHTML=viajes.length?viajes.map(v=>{
+    const totales={};
+    (v.items||[]).forEach(it=>{ totales[it.moneda]=(totales[it.moneda]||0)+(it.monto||0); });
+    const totalesStr=Object.entries(totales).map(([m,val])=>fmtMoney(val,m)).join(' + ')||'Sin gastos';
+    return '<div class="card" onclick="abrirViajeDetalle(\''+v.id+'\')" style="cursor:pointer">'+
+      '<div style="font-weight:700;font-size:16px">✈️ '+esc(v.destino)+'</div>'+
+      '<div style="font-size:12px;color:var(--text3);margin-top:2px">'+fmtFecha(v.inicio)+' → '+fmtFecha(v.fin)+'</div>'+
+      '<div style="font-size:13px;color:var(--accent);font-weight:700;margin-top:8px">'+totalesStr+'</div>'+
+      (v.companeros&&v.companeros.length?'<div style="font-size:11px;color:var(--text3);margin-top:4px">👥 '+v.companeros.map(esc).join(', ')+'</div>':'')+
+    '</div>';
+  }).join(''):'<div class="empty"><div class="empty-icon">✈️</div><div class="empty-text">Sin viajes</div><div class="empty-sub">Tocá + para planear uno</div></div>';
+}
+let _companerosViaje=[];
+function abrirModalViaje(id){
+  const v=id?DB.viajes.find(x=>x.id===id):null;
+  document.getElementById('vj-id').value=v?v.id:'';
+  document.getElementById('vj-destino').value=v?v.destino:'';
+  document.getElementById('vj-inicio').value=v?(v.inicio||''):fechaHoy();
+  document.getElementById('vj-fin').value=v?(v.fin||''):'';
+  document.getElementById('modal-viaje-title').textContent=v?'Editar viaje':'Nuevo viaje';
+  document.getElementById('btn-borrar-viaje').style.display=v?'':'none';
+  _companerosViaje=v?[...(v.companeros||[])]:[];
+  document.getElementById('vj-companero-nuevo').value='';
+  renderCompanerosLista();
+  abrirModal('viaje');
+}
+function renderCompanerosLista(){
+  document.getElementById('vj-companeros-lista').innerHTML=_companerosViaje.length?_companerosViaje.map((c,i)=>
+    '<div style="display:flex;align-items:center;gap:8px;background:var(--bg3);border-radius:10px;padding:8px 12px"><span style="flex:1;font-size:13px">'+esc(c)+'</span><button type="button" onclick="_companerosViaje.splice('+i+',1);renderCompanerosLista()" style="color:var(--red);font-size:16px">✕</button></div>'
+  ).join(''):'<div style="font-size:11px;color:var(--text3)">Sin compañeros — si viajás con alguien, agregalo para repartir gastos</div>';
+}
+function agregarCompanero(){
+  const inp=document.getElementById('vj-companero-nuevo');
+  const nombre=inp.value.trim();
+  if(!nombre) return;
+  if(!_companerosViaje.includes(nombre)) _companerosViaje.push(nombre);
+  inp.value='';
+  renderCompanerosLista();
+}
+async function guardarViaje(){
+  const destino=document.getElementById('vj-destino').value.trim();
+  if(!destino){ toast('⚠️ Ingresá el destino'); return; }
+  const id=document.getElementById('vj-id').value;
+  const existente=id?DB.viajes.find(v=>v.id===id):null;
+  const data={
+    id:id||uid(), destino,
+    inicio:document.getElementById('vj-inicio').value||fechaHoy(),
+    fin:document.getElementById('vj-fin').value||null,
+    companeros:[..._companerosViaje],
+    items: existente?existente.items:[],
+  };
+  if(!DB.viajes) DB.viajes=[];
+  if(id){ const idx=DB.viajes.findIndex(v=>v.id===id); if(idx>=0) DB.viajes[idx]=data; }
+  else DB.viajes.push(data);
+  await save(); cerrarModal('viaje'); renderViajes();
+  toast('✅ Viaje guardado');
+}
+async function borrarViaje(){
+  const id=document.getElementById('vj-id').value;
+  if(!id||!confirm('¿Borrar este viaje y todos sus gastos?')) return;
+  DB.viajes=DB.viajes.filter(v=>v.id!==id);
+  await save(); cerrarModal('viaje'); cerrarModal('viaje-detalle'); renderViajes();
+  toast('🗑 Viaje eliminado');
+}
+
+function computeViajeBalancePorMoneda(viaje,moneda){
+  const companeros=viaje.companeros||[];
+  const aportado={}, deberia={};
+  companeros.forEach(c=>{ aportado[c]=0; deberia[c]=0; });
+  (viaje.items||[]).filter(it=>it.moneda===moneda&&it.pagadoPor&&(it.participantes||[]).length).forEach(it=>{
+    const cuota=it.monto/it.participantes.length;
+    it.participantes.forEach(p=>{ if(deberia[p]!==undefined) deberia[p]+=cuota; });
+    if(aportado[it.pagadoPor]!==undefined) aportado[it.pagadoPor]+=it.monto;
+  });
+  const saldo={};
+  companeros.forEach(c=>{ saldo[c]=(aportado[c]||0)-(deberia[c]||0); });
+  return {aportado,deberia,saldo};
+}
+
+function abrirViajeDetalle(id){
+  const v=DB.viajes.find(x=>x.id===id);
+  if(!v) return;
+  document.getElementById('vd-titulo').textContent='✈️ '+v.destino;
+  document.getElementById('vd-titulo').dataset.viajeId=id;
+
+  const totalPorMoneda={};
+  (v.items||[]).forEach(it=>{ totalPorMoneda[it.moneda]=(totalPorMoneda[it.moneda]||0)+(it.monto||0); });
+  document.getElementById('vd-resumen').innerHTML='<div class="card">'+
+    '<div style="font-size:12px;color:var(--text3)">'+fmtFecha(v.inicio)+' → '+fmtFecha(v.fin)+'</div>'+
+    '<div style="margin-top:8px;display:flex;gap:18px;flex-wrap:wrap">'+
+    (Object.keys(totalPorMoneda).length?Object.entries(totalPorMoneda).map(([mon,val])=>
+      '<div><div style="font-size:19px;font-weight:900;font-family:var(--mono)">'+fmtMoney(val,mon)+'</div><div style="font-size:10px;color:var(--text3)">gastado en '+mon+'</div></div>'
+    ).join(''):'<div style="font-size:12px;color:var(--text3)">Sin gastos cargados</div>')+
+    '</div></div>';
+
+  let balanceHtml='';
+  ['ARS','USD'].forEach(mon=>{
+    const itemsEnMoneda=(v.items||[]).filter(it=>it.moneda===mon);
+    if(!itemsEnMoneda.length||!(v.companeros||[]).length) return;
+    const {saldo}=computeViajeBalancePorMoneda(v,mon);
+    balanceHtml+='<div class="section-title" style="margin-top:12px">Balance '+mon+'</div><div class="card">'+
+      v.companeros.map(c=>{
+        const s=saldo[c]||0;
+        const col=s>0.01?'var(--green)':s<-0.01?'var(--red)':'var(--text3)';
+        return '<div style="display:flex;justify-content:space-between;padding:4px 0;font-size:13px"><span>'+esc(c)+'</span><span style="font-family:var(--mono);font-weight:800;color:'+col+'">'+fmtMoney(s,mon)+'</span></div>';
+      }).join('')+
+    '</div>';
+    const pagos=computeSugerenciasPago(saldo);
+    if(pagos.length){
+      balanceHtml+='<div class="card" style="margin-top:6px">'+
+        pagos.map(p=>'<div style="display:flex;justify-content:space-between;font-size:12px;padding:3px 0"><span><b>'+esc(p.de)+'</b> le paga a <b>'+esc(p.a)+'</b></span><span style="font-family:var(--mono);font-weight:700;color:var(--gold)">'+fmtMoney(p.monto,mon)+'</span></div>').join('')+
+      '</div>';
+    }
+  });
+  document.getElementById('vd-balance').innerHTML=balanceHtml;
+
+  const items=[...(v.items||[])];
+  document.getElementById('vd-items').innerHTML=items.length?items.map(it=>
+    '<div class="row-item" onclick="abrirModalViajeItem(\''+id+'\',\''+it.id+'\')">'+
+      '<div class="row-icon" style="background:rgba(91,107,245,.15)">'+rubroLabel(it.rubro).split(' ')[0]+'</div>'+
+      '<div class="row-main"><div class="row-title">'+rubroLabel(it.rubro).split(' ').slice(1).join(' ')+(it.nota?' · '+esc(it.nota):'')+'</div>'+
+      '<div class="row-sub">'+(it.pagadoPor?'Pagó '+esc(it.pagadoPor):'')+'</div></div>'+
+      '<div class="row-amt"><div class="row-amt-val">'+fmtMoney(it.monto,it.moneda)+'</div></div>'+
+    '</div>'
+  ).join(''):'<div style="text-align:center;color:var(--text3);font-size:12px;padding:16px 0">Sin gastos cargados todavía</div>';
+
+  abrirModal('viaje-detalle');
+}
+
+let _rubroViajeItem='otro', _monedaViajeItem='ARS', _participantesViajeItem=[];
+function abrirModalViajeItem(viajeId,itemId){
+  const v=DB.viajes.find(x=>x.id===viajeId);
+  if(!v) return;
+  cerrarModal('viaje-detalle');
+  document.getElementById('vi-viaje-id').value=viajeId;
+  document.getElementById('vi-viaje-id').dataset.itemId=itemId||'';
+  const it=itemId?(v.items||[]).find(x=>x.id===itemId):null;
+  document.getElementById('vi-nota').value=it?(it.nota||''):'';
+  document.getElementById('vi-monto').value=it?it.monto:'';
+  document.getElementById('btn-borrar-viaje-item').style.display=it?'':'none';
+  _monedaViajeItem=it?it.moneda:'ARS';
+  setMonedaViajeItem(_monedaViajeItem);
+  _rubroViajeItem=it?it.rubro:'otro';
+  renderRubroPills();
+
+  const wrap=document.getElementById('vi-reparto-wrap');
+  if((v.companeros||[]).length){
+    wrap.style.display='block';
+    const sel=document.getElementById('vi-pagador');
+    sel.innerHTML='<option value="">— Elegí —</option>'+v.companeros.map(c=>'<option value="'+esc(c)+'" '+(it&&it.pagadoPor===c?'selected':'')+'>'+esc(c)+'</option>').join('');
+    _participantesViajeItem=it?[...(it.participantes||[])]:[...v.companeros];
+    renderParticipantesViajeItemPills(v.companeros);
+  } else {
+    wrap.style.display='none';
+    _participantesViajeItem=[];
+  }
+  abrirModal('viaje-item');
+}
+function renderRubroPills(){
+  document.getElementById('vi-rubro-pills').innerHTML=RUBROS_VIAJE.map(r=>
+    '<button type="button" class="pill '+(r.id===_rubroViajeItem?'sel':'')+'" onclick="_rubroViajeItem=\''+r.id+'\';renderRubroPills()">'+r.label+'</button>'
+  ).join('');
+}
+function setMonedaViajeItem(m){ _monedaViajeItem=m; document.getElementById('vi-mon-ars').classList.toggle('on',m==='ARS'); document.getElementById('vi-mon-usd').classList.toggle('on',m==='USD'); }
+function renderParticipantesViajeItemPills(companeros){
+  document.getElementById('vi-participantes-pills').innerHTML=companeros.map(c=>{
+    const sel=_participantesViajeItem.includes(c);
+    return '<button type="button" class="pill '+(sel?'sel':'')+'" onclick="toggleParticipanteViajeItem(\''+esc(c)+'\')">'+esc(c)+'</button>';
+  }).join('');
+}
+function toggleParticipanteViajeItem(nombre){
+  if(_participantesViajeItem.includes(nombre)) _participantesViajeItem=_participantesViajeItem.filter(x=>x!==nombre);
+  else _participantesViajeItem.push(nombre);
+  const v=DB.viajes.find(x=>x.id===document.getElementById('vi-viaje-id').value);
+  renderParticipantesViajeItemPills(v.companeros||[]);
+}
+async function guardarViajeItem(){
+  const viajeId=document.getElementById('vi-viaje-id').value;
+  const v=DB.viajes.find(x=>x.id===viajeId);
+  if(!v) return;
+  const monto=parseFloat(document.getElementById('vi-monto').value)||0;
+  if(monto<=0){ toast('⚠️ Ingresá el monto'); return; }
+  const itemId=document.getElementById('vi-viaje-id').dataset.itemId;
+  const pagador=document.getElementById('vi-pagador').value||null;
+  const data={
+    id:itemId||uid(), rubro:_rubroViajeItem, nota:document.getElementById('vi-nota').value.trim(),
+    moneda:_monedaViajeItem, monto,
+    pagadoPor:pagador||undefined,
+    participantes:pagador?[..._participantesViajeItem]:[],
+  };
+  if(!data.pagadoPor) delete data.pagadoPor;
+  if(!v.items) v.items=[];
+  if(itemId){ const idx=v.items.findIndex(i=>i.id===itemId); if(idx>=0) v.items[idx]=data; }
+  else v.items.push(data);
+  await save(); cerrarModal('viaje-item'); renderViajes();
+  abrirViajeDetalle(viajeId);
+  toast('✅ Gasto agregado');
+}
+async function borrarViajeItem(){
+  const viajeId=document.getElementById('vi-viaje-id').value;
+  const itemId=document.getElementById('vi-viaje-id').dataset.itemId;
+  const v=DB.viajes.find(x=>x.id===viajeId);
+  if(!v||!itemId||!confirm('¿Borrar este gasto del viaje?')) return;
+  v.items=(v.items||[]).filter(i=>i.id!==itemId);
+  await save(); cerrarModal('viaje-item'); renderViajes();
+  abrirViajeDetalle(viajeId);
+  toast('🗑 Gasto eliminado');
+}
+
+// ═══════════════════════════════════════════════════════════════
+// MÁS / CONFIG
+// ═══════════════════════════════════════════════════════════════
+function renderMas(){
+  const inv=DB.inversiones||[];
+  const totalInvArs=inv.filter(i=>i.moneda!=='USD').reduce((s,i)=>s+(i.actual||0),0);
+  document.getElementById('mas-inv-sub').textContent=inv.length?(inv.length+' inversiones · '+fmtMoney(totalInvArs,'ARS')):'Sin inversiones cargadas';
+
+  const proy=DB.proyectos||[];
+  document.getElementById('mas-proy-sub').textContent=proy.length?(proy.length+' proyecto'+(proy.length!==1?'s':'')+' activos'):'Sin proyectos cargados';
+
+  const comp=(DB.compromisos||[]).filter(c=>!c.pagado);
+  document.getElementById('mas-comp-sub').textContent=comp.length?(comp.length+' pendientes'):'Sin compromisos pendientes';
+
+  const tc=DB.perfil.tipoCambio;
+  document.getElementById('mas-tc-sub').textContent='1 USD = '+(tc?fmtMoney(tc,'ARS'):'—')+' ARS';
+
+  actualizarBotonHuella();
+  renderBackupStatus();
+}
+function renderBackupStatus(){
+  const el=document.getElementById('mas-backup-status');
+  if(!el) return;
+  const ultimo=DB.ultimoBackup;
+  if(!ultimo){ el.innerHTML='<span style="color:var(--gold)">⚠️ Todavía no exportaste ningún backup</span>'; return; }
+  const dias=Math.floor((Date.now()-ultimo)/86400000);
+  el.innerHTML=dias>=14?'<span style="color:var(--gold)">⚠️ Hace '+dias+' días que no exportás un backup</span>':'<span style="color:var(--text3)">Último backup: hace '+(dias===0?'menos de un día':dias+' día'+(dias===1?'':'s'))+'</span>';
+}
+
+function abrirModalTipoCambio(){
+  document.getElementById('tc-valor').value=DB.perfil.tipoCambio||'';
+  abrirModal('tipocambio');
+}
+async function guardarTipoCambio(){
+  const v=parseFloat(document.getElementById('tc-valor').value)||null;
+  DB.perfil.tipoCambio=v;
+  await save(); cerrarModal('tipocambio'); renderMas(); if(_pagActual==='home') renderHome();
+  toast('✅ Tipo de cambio guardado');
+}
+
+async function exportarDatos(){
+  const saltB64=localStorage.getItem('ff_salt');
+  const blob=await _encryptJSON(DB,_key);
+  const paquete={salt:saltB64, blob, exportadoEn:new Date().toISOString()};
+  const json=JSON.stringify(paquete);
+  const url=URL.createObjectURL(new Blob([json],{type:'application/json'}));
+  const a=document.createElement('a'); a.href=url;
+  a.download='frigurso-finanzas-backup-'+fechaHoy()+'.ffbak';
+  document.body.appendChild(a); a.click(); document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+  DB.ultimoBackup=Date.now();
+  await save();
+  renderMas();
+  toast('📦 Backup descargado (cifrado con tu contraseña actual)');
+}
+function importarDatos(e){
+  const file=e.target.files[0]; if(!file) return;
+  const reader=new FileReader();
+  reader.onload=(ev)=>{
+    try{
+      const paquete=JSON.parse(ev.target.result);
+      if(!paquete.salt||!paquete.blob) throw new Error();
+      if(!confirm('¿Reemplazar todos los datos actuales con este backup? Vas a tener que ingresar con la contraseña que tenías cuando lo exportaste. No se puede deshacer.')){ e.target.value=''; return; }
+      localStorage.setItem('ff_salt', paquete.salt);
+      localStorage.setItem('ff_blob', JSON.stringify(paquete.blob));
+      cerrarSesion();
+      toast('✅ Backup importado — ingresá con tu contraseña');
+    }catch(err){ toast('❌ Archivo inválido'); e.target.value=''; }
+  };
+  reader.readAsText(file);
+}
+
+// ═══════════════════════════════════════════════════════════════
+// INIT
+// ═══════════════════════════════════════════════════════════════
+initAuth();
+if('serviceWorker' in navigator) navigator.serviceWorker.register('sw.js').catch(()=>{});
+</script>
+</body>
+</html>
