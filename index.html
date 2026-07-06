@@ -419,10 +419,43 @@
   </div>
 </div>
 
+<!-- SIMULADOR DE DECISIONES -->
+<div class="page" id="page-simulador">
+  <div class="header"><div style="display:flex;align-items:center;gap:8px;width:100%"><button class="btn-icon" onclick="navGo('mas',document.getElementById('nav-mas'))">←</button><div class="header-title">🔮 Simulador</div></div></div>
+  <div style="padding:14px">
+    <div style="font-size:11px;color:var(--text3);margin-bottom:14px;line-height:1.5">Simulaciones con tus propios datos. Son estimaciones para ayudarte a decidir, no una promesa de rendimiento ni asesoramiento profesional.</div>
+
+    <div class="section-title">💸 ¿Y si dejo de pagar esto?</div>
+    <div class="card" style="margin-bottom:14px">
+      <select class="input" id="sim-compromiso-sel" onchange="calcularSimCompromiso()" style="margin-bottom:10px"></select>
+      <div id="sim-compromiso-resultado" style="font-size:13px;line-height:1.7"></div>
+    </div>
+
+    <div class="section-title">📈 ¿Y si cambia mi ingreso?</div>
+    <div class="card" style="margin-bottom:14px">
+      <div class="field-wrap"><div class="field-label">Ingreso mensual actual (ARS)</div><input type="number" class="input" id="sim-sueldo-actual" placeholder="0" oninput="calcularSimSueldo()"></div>
+      <div class="field-wrap"><div class="field-label">Cambio en % (positivo o negativo)</div><input type="number" class="input" id="sim-sueldo-pct" placeholder="Ej: 15 o -10" oninput="calcularSimSueldo()"></div>
+      <div id="sim-sueldo-resultado" style="font-size:13px;line-height:1.7"></div>
+    </div>
+
+    <div class="section-title">⚖️ Efectivo vs invertido</div>
+    <div class="card">
+      <div class="field-wrap"><div class="field-label">Monto a comparar (ARS)</div><input type="number" class="input" id="sim-monto" placeholder="0" oninput="calcularSimEfectivoVsInvertido()"></div>
+      <div class="field-wrap"><div class="field-label">Meses a proyectar</div><input type="number" class="input" id="sim-meses" placeholder="12" oninput="calcularSimEfectivoVsInvertido()"></div>
+      <div id="sim-comparacion-resultado" style="font-size:13px;line-height:1.7"></div>
+    </div>
+  </div>
+</div>
+
 <!-- MAS -->
 <div class="page" id="page-mas">
   <div class="header"><div class="header-title">📋 Más</div></div>
   <div style="padding:14px;display:flex;flex-direction:column;gap:10px">
+    <button class="admin-menu-btn" onclick="navGo('simulador',document.getElementById('nav-mas'))">
+      <span class="admin-menu-icon">🔮</span>
+      <span class="admin-menu-txt"><span class="admin-menu-titulo">Simulador de decisiones</span><span class="admin-menu-sub">¿Y si...? con tus números reales</span></span>
+      <span class="admin-menu-arrow">›</span>
+    </button>
     <button class="admin-menu-btn" onclick="navGo('cashflow',document.getElementById('nav-mas'))">
       <span class="admin-menu-icon">📊</span>
       <span class="admin-menu-txt"><span class="admin-menu-titulo">Cashflow</span><span class="admin-menu-sub" id="mas-cf-sub">—</span></span>
@@ -1595,6 +1628,7 @@ function navGo(page,btn){
   if(page==='viajes'){ renderViajes(); document.getElementById('fab-viajes').style.display=''; }
   if(page==='cashflow') renderCashflow();
   if(page==='mercado'){ if(!DB.mercado) actualizarMercado(); else renderMercado(); }
+  if(page==='simulador') renderSimulador();
   if(page==='mas') renderMas();
   if(page==='inversiones'){ renderInversiones(); document.getElementById('fab-inversiones').style.display=''; }
   if(page==='proyectos'){ renderProyectos(); document.getElementById('fab-proyectos').style.display=''; }
@@ -2361,6 +2395,94 @@ function generarAnalisisCartera(mkt){
   if(!tips.length) tips.push({icon:'✅',msg:'Por ahora no detectamos alertas grandes en tu cartera según los datos cargados.'});
 
   return tips.map(t=>'<div class="card"><div style="font-size:13px;line-height:1.5">'+t.icon+' '+t.msg+'</div></div>').join('');
+}
+
+// ═══════════════════════════════════════════════════════════════
+// SIMULADOR DE DECISIONES (¿y si...?) — todo calculado con datos propios + Mercado
+// ═══════════════════════════════════════════════════════════════
+function mejorTasaPlazoFijo(){
+  const mkt=DB.mercado;
+  if(!mkt||!mkt.plazoFijo||!mkt.plazoFijo.length) return null;
+  const disponibles=mkt.plazoFijo.filter(b=>b.tnaClientes);
+  if(!disponibles.length) return null;
+  return disponibles.slice().sort((a,b)=>b.tnaClientes-a.tnaClientes)[0];
+}
+function ultimaInflacionMensual(){
+  const mkt=DB.mercado;
+  if(!mkt||!mkt.inflacion||!mkt.inflacion.length) return null;
+  return mkt.inflacion[mkt.inflacion.length-1].valor;
+}
+function renderSimulador(){
+  const sel=document.getElementById('sim-compromiso-sel');
+  const compromisos=(DB.compromisos||[]).filter(c=>!c.pagado);
+  sel.innerHTML='<option value="">— Elegí un compromiso —</option>'+compromisos.map(c=>
+    '<option value="'+c.id+'">'+esc(c.nombre)+' ('+fmtMoney(c.monto,c.moneda)+' · '+c.frecuencia+')</option>'
+  ).join('');
+  document.getElementById('sim-compromiso-resultado').innerHTML=compromisos.length?'':'<div style="color:var(--text3);font-size:12px">No tenés compromisos cargados todavía.</div>';
+
+  const {ars:efectivoArs}=computeBalanceCuentas();
+  if(!document.getElementById('sim-monto').value) document.getElementById('sim-monto').value=Math.round(efectivoArs)||'';
+  if(!document.getElementById('sim-meses').value) document.getElementById('sim-meses').value=12;
+
+  calcularSimSueldo();
+  calcularSimEfectivoVsInvertido();
+}
+function calcularSimCompromiso(){
+  const id=document.getElementById('sim-compromiso-sel').value;
+  const el=document.getElementById('sim-compromiso-resultado');
+  if(!id){ el.innerHTML=''; return; }
+  const c=(DB.compromisos||[]).find(x=>x.id===id);
+  if(!c){ el.innerHTML=''; return; }
+  const ahorroMensual=c.frecuencia==='anual'?c.monto/12:c.monto;
+  const mejor=mejorTasaPlazoFijo();
+  const tasaMensual=mejor?mejor.tnaClientes/100/12:0;
+  let html='<div>Si dejás de pagar <b>'+esc(c.nombre)+'</b>, ahorrás <b style="color:var(--green)">'+fmtMoney(ahorroMensual,c.moneda)+' por mes</b>.</div>';
+  [6,12,24].forEach(n=>{
+    const guardado=ahorroMensual*n;
+    const invertido=tasaMensual>0?ahorroMensual*((Math.pow(1+tasaMensual,n)-1)/tasaMensual):guardado;
+    html+='<div style="margin-top:6px">A '+n+' meses: guardado nomás <b>'+fmtMoney(guardado,c.moneda)+'</b>'+
+      (mejor?' · a plazo fijo ('+mejor.tnaClientes+'% TNA) <b style="color:var(--gold)">'+fmtMoney(invertido,c.moneda)+'</b>':'')+'</div>';
+  });
+  el.innerHTML=html;
+}
+function calcularSimSueldo(){
+  const actual=parseFloat(document.getElementById('sim-sueldo-actual').value)||0;
+  const pct=parseFloat(document.getElementById('sim-sueldo-pct').value)||0;
+  const el=document.getElementById('sim-sueldo-resultado');
+  if(actual<=0){ el.innerHTML=''; return; }
+  const nuevo=actual*(1+pct/100);
+  const difMensual=nuevo-actual;
+  const difAnual=difMensual*12;
+  const col=difMensual>=0?'var(--green)':'var(--red)';
+  el.innerHTML='<div>Nuevo ingreso mensual: <b>'+fmtMoney(nuevo,'ARS')+'</b></div>'+
+    '<div style="margin-top:4px">Diferencia: <b style="color:'+col+'">'+(difMensual>=0?'+':'')+fmtMoney(difMensual,'ARS')+' por mes</b> ('+(difMensual>=0?'+':'')+fmtMoney(difAnual,'ARS')+' al año)</div>';
+}
+function calcularSimEfectivoVsInvertido(){
+  const monto=parseFloat(document.getElementById('sim-monto').value)||0;
+  const meses=parseInt(document.getElementById('sim-meses').value)||12;
+  const el=document.getElementById('sim-comparacion-resultado');
+  if(monto<=0){ el.innerHTML=''; return; }
+  const inflacionMensual=ultimaInflacionMensual();
+  const mejor=mejorTasaPlazoFijo();
+  let html='';
+  if(inflacionMensual!=null){
+    const valorReal=monto/Math.pow(1+inflacionMensual/100,meses);
+    html+='<div>Si lo dejás en efectivo: en '+meses+' meses, esos '+fmtMoney(monto,'ARS')+' de hoy van a "sentirse" como <b style="color:var(--red)">'+fmtMoney(valorReal,'ARS')+'</b> (con la inflación mensual actual del '+inflacionMensual+'%).</div>';
+  } else {
+    html+='<div style="color:var(--text3)">Actualizá Mercado para ver el efecto de la inflación acá.</div>';
+  }
+  if(mejor){
+    const tasaMensual=mejor.tnaClientes/100/12;
+    const futuro=monto*Math.pow(1+tasaMensual,meses);
+    html+='<div style="margin-top:6px">Si lo ponés a plazo fijo ('+esc(mejor.entidad)+', '+mejor.tnaClientes+'% TNA): en '+meses+' meses tendrías <b style="color:var(--gold)">'+fmtMoney(futuro,'ARS')+'</b>.</div>';
+    if(inflacionMensual!=null){
+      const futuroReal=futuro/Math.pow(1+inflacionMensual/100,meses);
+      html+='<div style="margin-top:4px;font-size:11px;color:var(--text3)">En poder de compra de hoy, esos '+fmtMoney(futuro,'ARS')+' equivaldrían a ~'+fmtMoney(futuroReal,'ARS')+'.</div>';
+    }
+  } else {
+    html+='<div style="margin-top:6px;color:var(--text3)">Actualizá Mercado para ver la mejor tasa de plazo fijo disponible.</div>';
+  }
+  el.innerHTML=html;
 }
 
 // ═══════════════════════════════════════════════════════════════
@@ -3714,7 +3836,7 @@ const PAGE_RENDER_FN={
   home:()=>renderHome(), gastos:()=>renderGastos(), cuentas:()=>renderCuentas(),
   viajes:()=>renderViajes(), cashflow:()=>renderCashflow(), mas:()=>renderMas(),
   inversiones:()=>renderInversiones(), proyectos:()=>renderProyectos(), compromisos:()=>renderCompromisos(),
-  mercado:()=>actualizarMercado(),
+  mercado:()=>actualizarMercado(), simulador:()=>renderSimulador(),
 };
 function refrescarPaginaActual(){
   const fn=PAGE_RENDER_FN[_pagActual];
