@@ -696,15 +696,17 @@
 <!-- MODAL GASTO DE PROYECTO -->
 <div class="modal-overlay" id="modal-proyecto-gasto" onclick="if(event.target===this)cerrarModal('proyecto-gasto')">
   <div class="modal">
-    <div class="modal-title">+ Gasto del proyecto</div>
+    <div class="modal-title" id="modal-proyecto-gasto-title">+ Gasto del proyecto</div>
     <input type="hidden" id="pyg-proyecto-id">
+    <input type="hidden" id="pyg-item-id">
     <div class="field-wrap"><div class="field-label">Concepto</div><input type="text" class="input" id="pyg-concepto" placeholder="Ej: Azulejos, mano de obra..."></div>
     <div class="field-wrap">
       <div class="field-label">Categoría</div>
       <div class="pill-sel" id="pyg-cat-pills"></div>
     </div>
     <div class="field-wrap"><div class="field-label">Monto</div><input type="number" class="input" id="pyg-monto" placeholder="0" step="0.01"></div>
-    <button class="btn-primary" onclick="guardarGastoProyecto()">Agregar</button>
+    <button class="btn-primary" onclick="guardarGastoProyecto()">Guardar</button>
+    <button class="btn-danger" id="btn-borrar-gasto-proyecto" style="display:none" onclick="borrarGastoProyecto()">🗑 Borrar</button>
     <button class="btn-ghost" onclick="volverAProyectoDetalleDesdeGasto()">Cancelar</button>
   </div>
 </div>
@@ -2560,7 +2562,7 @@ function _renderProyectoDetalleContenido(id){
   ).join(''):'<div style="text-align:center;color:var(--text3);font-size:12px;padding:6px 0">Sin items en la lista de compras</div>';
 
   document.getElementById('pd-gastos').innerHTML=gastos.length?gastos.map(g=>
-    '<div class="row-item static">'+
+    '<div class="row-item" onclick="abrirModalGastoProyecto(\''+p.id+'\',\''+g.id+'\')">'+
       '<div class="row-main"><div class="row-title">'+esc(g.concepto)+'</div><div class="row-sub">'+catProyectoLabel(g.categoria||'otro')+'</div></div>'+
       '<div class="row-amt"><div class="row-amt-val">'+fmtMoney(g.monto,p.moneda)+'</div></div>'+
     '</div>'
@@ -2570,11 +2572,16 @@ function _renderProyectoDetalleContenido(id){
 }
 
 let _catGastoProyecto='otro';
-function abrirModalGastoProyecto(proyectoId){
+function abrirModalGastoProyecto(proyectoId,itemId){
+  const p=DB.proyectos.find(x=>x.id===proyectoId);
+  const g=(itemId&&p)?(p.gastos||[]).find(x=>x.id===itemId):null;
   document.getElementById('pyg-proyecto-id').value=proyectoId;
-  document.getElementById('pyg-concepto').value='';
-  document.getElementById('pyg-monto').value='';
-  _catGastoProyecto='otro';
+  document.getElementById('pyg-item-id').value=itemId||'';
+  document.getElementById('pyg-concepto').value=g?g.concepto:'';
+  document.getElementById('pyg-monto').value=g?g.monto:'';
+  document.getElementById('modal-proyecto-gasto-title').textContent=g?'Editar gasto':'+ Gasto del proyecto';
+  document.getElementById('btn-borrar-gasto-proyecto').style.display=g?'':'none';
+  _catGastoProyecto=g?(g.categoria||'otro'):'otro';
   renderCatProyectoPills();
   cambiarModal('proyecto-detalle','proyecto-gasto');
 }
@@ -2595,12 +2602,26 @@ async function guardarGastoProyecto(){
   const concepto=document.getElementById('pyg-concepto').value.trim();
   const monto=parseFloat(document.getElementById('pyg-monto').value)||0;
   if(!concepto||monto<=0){ toast('⚠️ Completá concepto y monto'); return; }
+  const itemId=document.getElementById('pyg-item-id').value;
+  const data={id:itemId||uid(),concepto,monto,categoria:_catGastoProyecto};
   if(!p.gastos) p.gastos=[];
-  p.gastos.push({id:uid(),concepto,monto,categoria:_catGastoProyecto});
+  if(itemId){ const idx=p.gastos.findIndex(g=>g.id===itemId); if(idx>=0) p.gastos[idx]=data; }
+  else p.gastos.push(data);
   await save(); renderProyectos();
   _renderProyectoDetalleContenido(proyectoId);
   cambiarModal('proyecto-gasto','proyecto-detalle');
-  toast('✅ Agregado al proyecto');
+  toast('✅ Guardado en el proyecto');
+}
+async function borrarGastoProyecto(){
+  const proyectoId=document.getElementById('pyg-proyecto-id').value;
+  const itemId=document.getElementById('pyg-item-id').value;
+  const p=DB.proyectos.find(x=>x.id===proyectoId);
+  if(!p||!itemId||!confirm('¿Borrar este gasto del proyecto?')) return;
+  p.gastos=(p.gastos||[]).filter(g=>g.id!==itemId);
+  await save(); renderProyectos();
+  _renderProyectoDetalleContenido(proyectoId);
+  cambiarModal('proyecto-gasto','proyecto-detalle');
+  toast('🗑 Gasto eliminado del proyecto');
 }
 
 // ── Lista de compras del proyecto ──
