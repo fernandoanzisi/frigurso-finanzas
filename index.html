@@ -656,7 +656,7 @@
     </div>
     <button class="btn-primary" onclick="guardarViaje()">Guardar viaje</button>
     <button class="btn-danger" id="btn-borrar-viaje" onclick="borrarViaje()" style="display:none">🗑 Borrar viaje</button>
-    <button class="btn-ghost" onclick="cerrarModal('viaje')">Cancelar</button>
+    <button class="btn-ghost" onclick="cancelarModalViaje()">Cancelar</button>
   </div>
 </div>
 
@@ -692,6 +692,7 @@
   <div class="modal" style="max-height:92dvh">
     <div class="modal-title" id="vd-titulo">Viaje</div>
     <div id="vd-resumen" style="margin-bottom:10px"></div>
+    <button class="btn-ghost" style="margin-bottom:14px" onclick="editarViajeDesdeDetalle()">✏️ Editar destino / fechas / compañeros</button>
 
     <div class="section-title" style="margin-top:4px">🎯 Meta de ahorro</div>
     <div id="vd-meta" style="margin-bottom:10px"></div>
@@ -741,6 +742,17 @@
       </div>
     </div>
 
+    <div class="section-title" style="margin-top:14px">🏆 Comparar opciones</div>
+    <div class="card" style="margin-bottom:10px">
+      <div style="display:flex;gap:6px;margin-bottom:8px">
+        <button type="button" class="btn-ghost" style="margin-bottom:0;font-size:12px" onclick="buscarLugaresCerca(document.getElementById('vd-titulo').dataset.viajeId,'hotel')">🏨 Buscar hoteles cerca</button>
+        <button type="button" class="btn-ghost" style="margin-bottom:0;font-size:12px" onclick="buscarLugaresCerca(document.getElementById('vd-titulo').dataset.viajeId,'restaurante')">🍽️ Buscar restaurantes</button>
+      </div>
+      <div id="vd-comparador-busqueda" style="margin-bottom:6px"></div>
+      <div id="vd-comparador-lista"></div>
+      <button type="button" class="btn-ghost" style="margin-bottom:0" onclick="abrirModalComparadorItem(document.getElementById('vd-titulo').dataset.viajeId)">+ Agregar opción manualmente</button>
+    </div>
+
     <div class="section-title" style="margin-top:14px">🗺️ Itinerario · <span id="vd-dias-sugeridos" style="color:var(--text3);font-weight:400;text-transform:none;letter-spacing:0"></span></div>
     <div id="vd-itinerario" style="margin-bottom:8px"></div>
     <div style="display:flex;gap:6px;margin-bottom:14px">
@@ -755,6 +767,34 @@
     <div id="vd-items"></div>
     <button class="btn-primary" onclick="abrirModalViajeItem(document.getElementById('vd-titulo').dataset.viajeId)">+ Agregar gasto</button>
     <button class="btn-ghost" onclick="cerrarModal('viaje-detalle')">Cerrar</button>
+  </div>
+</div>
+
+<!-- MODAL ITEM DEL COMPARADOR (hotel/restaurante/vuelo) -->
+<div class="modal-overlay" id="modal-comparador-item" onclick="if(event.target===this)cerrarModal('comparador-item')">
+  <div class="modal">
+    <div class="modal-title" id="modal-comparador-title">+ Opción para comparar</div>
+    <input type="hidden" id="cp-viaje-id">
+    <input type="hidden" id="cp-item-id">
+    <div class="field-wrap">
+      <div class="field-label">Categoría</div>
+      <div class="pill-sel" id="cp-cat-pills"></div>
+    </div>
+    <div class="field-wrap"><div class="field-label">Nombre</div><input type="text" class="input" id="cp-nombre" placeholder="Ej: Hotel Bauen" oninput="actualizarLinkResenasLive()"></div>
+    <div class="field-wrap">
+      <div class="field-label">Moneda</div>
+      <div class="moneda-toggle"><button type="button" id="cp-mon-ars" onclick="setMonedaComparador('ARS')">ARS</button><button type="button" id="cp-mon-usd" onclick="setMonedaComparador('USD')">USD</button></div>
+    </div>
+    <div class="field-wrap"><div class="field-label">Precio</div><input type="number" class="input" id="cp-precio" placeholder="0" step="0.01"></div>
+    <div class="field-wrap">
+      <div class="field-label">Tu puntaje (según lo que veas en reseñas)</div>
+      <div id="cp-rating-pills" style="font-size:24px;letter-spacing:4px"></div>
+    </div>
+    <div class="field-wrap"><div class="field-label">Nota</div><input type="text" class="input" id="cp-nota" placeholder="Ej: Bien ubicado, buen desayuno..."></div>
+    <a id="cp-reseñas-link" href="#" target="_blank" rel="noopener" class="btn-ghost" style="display:block;text-align:center;text-decoration:none">🔎 Ver reseñas en Google</a>
+    <button class="btn-primary" onclick="guardarComparadorItem()">Guardar</button>
+    <button class="btn-danger" id="btn-borrar-comparador" style="display:none" onclick="borrarComparadorItem()">🗑 Borrar</button>
+    <button class="btn-ghost" onclick="volverAViajeDetalleDesdeComparador()">Cancelar</button>
   </div>
 </div>
 
@@ -2240,6 +2280,7 @@ function renderViajes(){
   }).join(''):'<div class="empty"><div class="empty-icon">✈️</div><div class="empty-text">Sin viajes</div><div class="empty-sub">Tocá + para planear uno</div></div>';
 }
 let _companerosViaje=[];
+let _viajeOrigenDetalle=null;
 function abrirModalViaje(id){
   const v=id?DB.viajes.find(x=>x.id===id):null;
   document.getElementById('vj-id').value=v?v.id:'';
@@ -2251,7 +2292,28 @@ function abrirModalViaje(id){
   _companerosViaje=v?[...(v.companeros||[])]:[];
   document.getElementById('vj-companero-nuevo').value='';
   renderCompanerosLista();
+  _viajeOrigenDetalle=null;
   abrirModal('viaje');
+}
+function editarViajeDesdeDetalle(){
+  const id=document.getElementById('vd-titulo').dataset.viajeId;
+  const v=DB.viajes.find(x=>x.id===id);
+  if(!v) return;
+  document.getElementById('vj-id').value=v.id;
+  document.getElementById('vj-destino').value=v.destino;
+  document.getElementById('vj-inicio').value=v.inicio||'';
+  document.getElementById('vj-fin').value=v.fin||'';
+  document.getElementById('modal-viaje-title').textContent='Editar viaje';
+  document.getElementById('btn-borrar-viaje').style.display='';
+  _companerosViaje=[...(v.companeros||[])];
+  document.getElementById('vj-companero-nuevo').value='';
+  renderCompanerosLista();
+  _viajeOrigenDetalle=id;
+  cambiarModal('viaje-detalle','viaje');
+}
+function cancelarModalViaje(){
+  if(_viajeOrigenDetalle){ const id=_viajeOrigenDetalle; _viajeOrigenDetalle=null; _renderViajeDetalleContenido(id); cambiarModal('viaje','viaje-detalle'); }
+  else cerrarModal('viaje');
 }
 function renderCompanerosLista(){
   document.getElementById('vj-companeros-lista').innerHTML=_companerosViaje.length?_companerosViaje.map((c,i)=>
@@ -2272,6 +2334,7 @@ async function guardarViaje(){
   const id=document.getElementById('vj-id').value;
   const existente=id?DB.viajes.find(v=>v.id===id):null;
   const data={
+    ...(existente||{}),
     id:id||uid(), destino,
     inicio:document.getElementById('vj-inicio').value||fechaHoy(),
     fin:document.getElementById('vj-fin').value||null,
@@ -2281,13 +2344,16 @@ async function guardarViaje(){
   if(!DB.viajes) DB.viajes=[];
   if(id){ const idx=DB.viajes.findIndex(v=>v.id===id); if(idx>=0) DB.viajes[idx]=data; }
   else DB.viajes.push(data);
-  await save(); cerrarModal('viaje'); renderViajes();
+  await save(); renderViajes();
+  if(_viajeOrigenDetalle){ const oid=_viajeOrigenDetalle; _viajeOrigenDetalle=null; _renderViajeDetalleContenido(oid); cambiarModal('viaje','viaje-detalle'); }
+  else cerrarModal('viaje');
   toast('✅ Viaje guardado');
 }
 async function borrarViaje(){
   const id=document.getElementById('vj-id').value;
   if(!id||!confirm('¿Borrar este viaje y todos sus gastos?')) return;
   DB.viajes=DB.viajes.filter(v=>v.id!==id);
+  _viajeOrigenDetalle=null;
   await save(); cerrarModal('viaje'); cerrarModal('viaje-detalle'); renderViajes();
   toast('🗑 Viaje eliminado');
 }
@@ -2349,6 +2415,9 @@ function _renderViajeDetalleContenido(id){
     document.getElementById('vd-clima-wrap').style.display='none';
     document.getElementById('vd-maps-wrap').style.display='none';
   }
+
+  document.getElementById('vd-comparador-busqueda').innerHTML='';
+  _renderComparadorContenido(v);
 
   const dias=diasSugeridos(v);
   document.getElementById('vd-dias-sugeridos').textContent=dias?('sugerimos ~'+dias+' días'):'';
@@ -2693,6 +2762,135 @@ async function actualizarClima(viajeId){
 function renderMapsLink(v){
   const a=document.getElementById('vd-maps-link');
   a.href='https://www.google.com/maps/dir/?api=1&origin='+v.origenLat+','+v.origenLon+'&destination='+v.destinoLat+','+v.destinoLon+'&travelmode=driving';
+}
+
+// ── Comparador: descubrir hoteles/restaurantes reales (OpenStreetMap) y comparar precios/rating cargados a mano ──
+const CATEGORIAS_COMPARADOR=[
+  {id:'hotel',label:'🏨 Hotel'},
+  {id:'restaurante',label:'🍽️ Restaurante'},
+  {id:'vuelo',label:'✈️ Vuelo'},
+  {id:'otro',label:'📦 Otro'},
+];
+function catComparadorLabel(id){ return (CATEGORIAS_COMPARADOR.find(c=>c.id===id)||CATEGORIAS_COMPARADOR[3]).label; }
+async function buscarLugaresCerca(viajeId,tipo){
+  const v=DB.viajes.find(x=>x.id===viajeId);
+  if(!v) return;
+  if(v.destinoLat==null){ toast('⚠️ Primero buscá el destino en "Ruta, combustible y clima"'); return; }
+  const el=document.getElementById('vd-comparador-busqueda');
+  el.innerHTML='<div style="font-size:12px;color:var(--text3);padding:6px 0">Buscando...</div>';
+  const filtro=tipo==='hotel'?'["tourism"~"^(hotel|hostel|guest_house)$"]':'["amenity"="restaurant"]';
+  const query='[out:json][timeout:20];node'+filtro+'(around:3000,'+v.destinoLat+','+v.destinoLon+');out 8;';
+  try{
+    const res=await fetch('https://overpass-api.de/api/interpreter?data='+encodeURIComponent(query));
+    const data=await res.json();
+    const lugares=(data.elements||[]).filter(e=>e.tags&&e.tags.name);
+    if(!lugares.length){ el.innerHTML='<div style="font-size:12px;color:var(--text3);padding:6px 0">No encontramos resultados cerca. Podés agregar la opción manualmente.</div>'; return; }
+    const categoria=tipo==='hotel'?'hotel':'restaurante';
+    el.innerHTML='<div style="font-size:11px;color:var(--text3);margin-bottom:6px">Resultados de OpenStreetMap — tocá + para agregarlo al comparador:</div>'+
+      lugares.map(l=>
+        '<div class="row-item static" style="cursor:default">'+
+          '<div class="row-main"><div class="row-title">'+esc(l.tags.name)+'</div><div class="row-sub">'+esc(l.tags['addr:street']||'Cerca del destino')+'</div></div>'+
+          '<button type="button" class="btn-icon" style="font-size:13px" onclick="abrirModalComparadorItem(\''+viajeId+'\',null,\''+categoria+'\',\''+esc(l.tags.name).replace(/'/g,"\\'")+'\')">＋</button>'+
+        '</div>'
+      ).join('');
+  }catch(e){ el.innerHTML='<div style="font-size:12px;color:var(--text3);padding:6px 0">No se pudo buscar — revisá tu conexión.</div>'; }
+}
+let _catComparador='hotel', _monedaComparador='ARS', _ratingComparador=0;
+function abrirModalComparadorItem(viajeId,itemId,categoriaPrefill,nombrePrefill){
+  const v=DB.viajes.find(x=>x.id===viajeId);
+  if(!v) return;
+  document.getElementById('cp-viaje-id').value=viajeId;
+  document.getElementById('cp-item-id').value=itemId||'';
+  const it=itemId?(v.comparador||[]).find(x=>x.id===itemId):null;
+  document.getElementById('cp-nombre').value=it?it.nombre:(nombrePrefill||'');
+  document.getElementById('cp-precio').value=it?it.precio:'';
+  document.getElementById('cp-nota').value=it?(it.nota||''):'';
+  document.getElementById('modal-comparador-title').textContent=it?'Editar opción':'+ Opción para comparar';
+  document.getElementById('btn-borrar-comparador').style.display=it?'':'none';
+  _catComparador=it?it.categoria:(categoriaPrefill||'hotel');
+  _ratingComparador=it?(it.rating||0):0;
+  renderCatComparadorPills();
+  renderRatingPills();
+  setMonedaComparador(it?it.moneda:'ARS');
+  actualizarLinkResenas(v.destino);
+  cambiarModal('viaje-detalle','comparador-item');
+}
+function renderCatComparadorPills(){
+  document.getElementById('cp-cat-pills').innerHTML=CATEGORIAS_COMPARADOR.map(c=>
+    '<button type="button" class="pill '+(c.id===_catComparador?'sel':'')+'" onclick="_catComparador=\''+c.id+'\';renderCatComparadorPills()">'+c.label+'</button>'
+  ).join('');
+}
+function renderRatingPills(){
+  let html='';
+  for(let i=1;i<=5;i++) html+='<span onclick="setRatingComparador('+i+')" style="cursor:pointer">'+(i<=_ratingComparador?'★':'☆')+'</span>';
+  document.getElementById('cp-rating-pills').innerHTML=html;
+}
+function setRatingComparador(n){ _ratingComparador=(_ratingComparador===n)?0:n; renderRatingPills(); }
+function setMonedaComparador(m){ _monedaComparador=m; document.getElementById('cp-mon-ars').classList.toggle('on',m==='ARS'); document.getElementById('cp-mon-usd').classList.toggle('on',m==='USD'); }
+function actualizarLinkResenas(destino){
+  const nombre=document.getElementById('cp-nombre').value.trim();
+  const a=document.getElementById('cp-reseñas-link');
+  a.href='https://www.google.com/search?q='+encodeURIComponent((nombre||'')+' '+(destino||'')+' reseñas');
+}
+function actualizarLinkResenasLive(){
+  const v=DB.viajes.find(x=>x.id===document.getElementById('cp-viaje-id').value);
+  actualizarLinkResenas(v?v.destino:'');
+}
+async function guardarComparadorItem(){
+  const viajeId=document.getElementById('cp-viaje-id').value;
+  const v=DB.viajes.find(x=>x.id===viajeId);
+  if(!v) return;
+  const nombre=document.getElementById('cp-nombre').value.trim();
+  if(!nombre){ toast('⚠️ Ingresá un nombre'); return; }
+  const itemId=document.getElementById('cp-item-id').value;
+  const data={
+    id:itemId||uid(), categoria:_catComparador, nombre,
+    moneda:_monedaComparador, precio:parseFloat(document.getElementById('cp-precio').value)||0,
+    rating:_ratingComparador, nota:document.getElementById('cp-nota').value.trim(),
+  };
+  if(!v.comparador) v.comparador=[];
+  if(itemId){ const idx=v.comparador.findIndex(c=>c.id===itemId); if(idx>=0) v.comparador[idx]=data; }
+  else v.comparador.push(data);
+  await save();
+  _renderComparadorContenido(v);
+  cambiarModal('comparador-item','viaje-detalle');
+  toast('✅ Opción guardada');
+}
+async function borrarComparadorItem(){
+  const viajeId=document.getElementById('cp-viaje-id').value;
+  const itemId=document.getElementById('cp-item-id').value;
+  const v=DB.viajes.find(x=>x.id===viajeId);
+  if(!v||!itemId) return;
+  v.comparador=(v.comparador||[]).filter(c=>c.id!==itemId);
+  await save();
+  _renderComparadorContenido(v);
+  cambiarModal('comparador-item','viaje-detalle');
+  toast('🗑 Opción eliminada');
+}
+function volverAViajeDetalleDesdeComparador(){
+  const viajeId=document.getElementById('cp-viaje-id').value;
+  const v=DB.viajes.find(x=>x.id===viajeId);
+  if(v) _renderComparadorContenido(v);
+  cambiarModal('comparador-item','viaje-detalle');
+}
+function _renderComparadorContenido(v){
+  const items=v.comparador||[];
+  if(!items.length){ document.getElementById('vd-comparador-lista').innerHTML='<div style="text-align:center;color:var(--text3);font-size:12px;padding:10px 0">Sin opciones cargadas todavía</div>'; return; }
+  const grupos=CATEGORIAS_COMPARADOR.map(c=>c.id);
+  document.getElementById('vd-comparador-lista').innerHTML=grupos.map(cat=>{
+    const delGrupo=items.filter(i=>i.categoria===cat).sort((a,b)=>(a.precio||0)-(b.precio||0));
+    if(!delGrupo.length) return '';
+    const masBarato=delGrupo.length>1?delGrupo[0].id:null;
+    return '<div style="font-size:11px;font-weight:700;color:var(--text3);margin:8px 0 4px">'+catComparadorLabel(cat)+'</div>'+
+      delGrupo.map(i=>{
+        const estrellas=i.rating?'★'.repeat(i.rating)+'☆'.repeat(5-i.rating):'';
+        return '<div class="row-item" onclick="abrirModalComparadorItem(\''+v.id+'\',\''+i.id+'\')">'+
+          '<div class="row-main"><div class="row-title">'+(i.id===masBarato?'🏆 ':'')+esc(i.nombre)+'</div>'+
+          '<div class="row-sub">'+(estrellas?estrellas+(i.nota?' · ':''):'')+esc(i.nota||'')+'</div></div>'+
+          (i.precio?'<div class="row-amt"><div class="row-amt-val">'+fmtMoney(i.precio,i.moneda)+'</div></div>':'')+
+        '</div>';
+      }).join('');
+  }).join('');
 }
 
 // ── Itinerario (tramos, alojamientos, actividades) ──
