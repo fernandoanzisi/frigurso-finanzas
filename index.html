@@ -453,6 +453,7 @@
       <div class="field-label">Foto de factura (opcional)</div>
       <div id="g-foto-preview" style="width:100%;height:120px;border-radius:12px;background:var(--bg3);border:1px dashed var(--border);display:flex;align-items:center;justify-content:center;color:var(--text3);font-size:13px;overflow:hidden;background-size:cover;background-position:center;margin-bottom:8px">Sin foto</div>
       <label class="btn-ghost" style="display:block;text-align:center;margin-bottom:0">📷 Sacar / elegir foto<input type="file" accept="image/*" capture="environment" style="display:none" id="g-foto-input" onchange="onFotoGastoSeleccionada(event)"></label>
+      <button type="button" class="btn-ghost" style="margin-top:6px;margin-bottom:0;font-size:12px" onclick="leerMontoDeFoto()">🔍 Leer monto de la foto</button>
     </div>
     <div class="field-wrap"><div class="field-label">Fecha</div><input type="date" class="input" id="g-fecha"></div>
     <div class="field-wrap"><div class="field-label">Descripción</div><input type="text" class="input" id="g-desc" placeholder="Ej: Supermercado, nafta, cena..."></div>
@@ -1550,7 +1551,7 @@ async function borrarPresupuesto(){
   toast('🗑 Presupuesto eliminado');
 }
 
-let _fotoGastoData=null, _monedaGasto='ARS', _catGasto='comida';
+let _fotoGastoData=null, _fotoGastoOCRData=null, _monedaGasto='ARS', _catGasto='comida';
 
 function abrirModalGasto(id){
   const g=id?DB.gastos.find(x=>x.id===id):null;
@@ -1562,6 +1563,7 @@ function abrirModalGasto(id){
   document.getElementById('modal-gasto-title').textContent=g?'Editar gasto':'Nuevo gasto';
   document.getElementById('btn-borrar-gasto').style.display=g?'':'none';
   _fotoGastoData=g?(g.foto||null):null;
+  _fotoGastoOCRData=null;
   _catGasto=g?g.categoria:'comida';
   _monedaGasto=g?g.moneda:'ARS';
   actualizarPreviewFotoGasto();
@@ -1589,6 +1591,15 @@ function onFotoGastoSeleccionada(e){
       canvas.width=w; canvas.height=h;
       canvas.getContext('2d').drawImage(img,0,0,w,h);
       _fotoGastoData=canvas.toDataURL('image/jpeg',0.6);
+
+      const MAXOCR=1600;
+      let wo=img.width,ho=img.height;
+      if(wo>ho&&wo>MAXOCR){ho=ho*MAXOCR/wo;wo=MAXOCR;} else if(ho>MAXOCR){wo=wo*MAXOCR/ho;ho=MAXOCR;}
+      const canvasOcr=document.createElement('canvas');
+      canvasOcr.width=wo; canvasOcr.height=ho;
+      canvasOcr.getContext('2d').drawImage(img,0,0,wo,ho);
+      _fotoGastoOCRData=canvasOcr.toDataURL('image/jpeg',0.85);
+
       actualizarPreviewFotoGasto();
     };
     img.src=ev.target.result;
@@ -1599,6 +1610,72 @@ function actualizarPreviewFotoGasto(){
   const el=document.getElementById('g-foto-preview');
   if(_fotoGastoData){ el.style.backgroundImage='url('+_fotoGastoData+')'; el.textContent=''; }
   else { el.style.backgroundImage=''; el.textContent='Sin foto'; }
+}
+
+// ── OCR local de facturas (Tesseract.js, cargado bajo demanda desde CDN) ──
+function extraerMontoDeTexto(texto){
+  const numRegex=/\d{1,3}(?:\.\d{3})+(?:,\d{1,2})?|\d+(?:[.,]\d{1,2})?/g;
+  const parseNum=(s)=>{
+    let limpio=s.replace(/[^\d.,]/g,'');
+    if(!limpio) return NaN;
+    if(limpio.includes(',')){
+      limpio=limpio.replace(/\./g,'').replace(',','.');
+    } else {
+      const dots=(limpio.match(/\./g)||[]).length;
+      if(dots>1) limpio=limpio.replace(/\./g,'');
+      else if(dots===1&&limpio.split('.')[1].length===3) limpio=limpio.replace('.','');
+    }
+    return parseFloat(limpio);
+  };
+  const lineas=texto.split('\n');
+  for(const linea of lineas){
+    const l=linea.toLowerCase();
+    if(l.includes('total')&&!/sub\s*total/.test(l)){
+      const matches=linea.match(numRegex);
+      if(matches&&matches.length){
+        const n=parseNum(matches[matches.length-1]);
+        if(n>0&&n<100000000) return n;
+      }
+    }
+  }
+  const todos=texto.match(numRegex)||[];
+  let max=0;
+  todos.forEach(m=>{
+    const n=parseNum(m);
+    if(n>0&&n<100000000&&n>max) max=n;
+  });
+  return max>0?max:null;
+}
+let _tesseractCargando=null;
+function cargarTesseract(){
+  if(typeof Tesseract!=='undefined') return Promise.resolve();
+  if(_tesseractCargando) return _tesseractCargando;
+  _tesseractCargando=new Promise((resolve,reject)=>{
+    const s=document.createElement('script');
+    s.src='https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js';
+    s.onload=()=>resolve();
+    s.onerror=()=>{ _tesseractCargando=null; reject(new Error('No se pudo cargar la librería de lectura')); };
+    document.body.appendChild(s);
+  });
+  return _tesseractCargando;
+}
+async function leerMontoDeFoto(){
+  const fuente=_fotoGastoOCRData||_fotoGastoData;
+  if(!fuente){ toast('⚠️ Primero sacá o elegí una foto'); return; }
+  toast('🔍 Leyendo factura...');
+  try{
+    await cargarTesseract();
+    const resultado=await Tesseract.recognize(fuente,'spa');
+    const monto=extraerMontoDeTexto(resultado.data.text||'');
+    if(monto){
+      document.getElementById('g-monto').value=monto;
+      toast('✅ Monto detectado: '+fmtMoney(monto,_monedaGasto));
+    } else {
+      toast('⚠️ No pude leer el monto — completalo a mano');
+    }
+  }catch(e){
+    toast('⚠️ No se pudo leer la foto — revisá tu conexión o completá a mano');
+  }
 }
 
 async function guardarGasto(){
