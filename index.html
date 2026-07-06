@@ -292,6 +292,10 @@
     <div id="cf-balance" style="margin-bottom:14px"></div>
     <div class="section-title">Ingresos vs egresos</div>
     <div class="card" id="cf-barras" style="margin-bottom:14px"></div>
+    <div class="section-title">📈 Últimos 6 meses (ARS)</div>
+    <div class="card" id="cf-tendencia" style="margin-bottom:14px"></div>
+    <div class="section-title">💰 Evolución del patrimonio</div>
+    <div class="card" id="cf-patrimonio-historial" style="margin-bottom:14px"></div>
     <div style="display:flex;gap:8px;margin-bottom:14px">
       <button class="btn-primary" style="margin-bottom:0" onclick="abrirModalIngreso()">+ Ingreso</button>
       <button class="btn-ghost" style="margin-bottom:0" onclick="abrirModalGasto()">+ Gasto</button>
@@ -945,7 +949,7 @@ function _dbVacia(){
     perfil:{nombre:'',email:'',tipoCambio:null},
     gastos:[], ingresos:[], cuentas:[], tarjetas:[], prestamos:[], compromisos:[],
     inversiones:[], proyectos:[], viajes:[], presupuestos:[],
-    mercado:null,
+    mercado:null, historialPatrimonio:[], ultimoSnapshotPatrimonio:null,
     ultimoBackup:null,
   };
 }
@@ -1404,6 +1408,7 @@ function computeBalanceCuentas(){
 function renderHome(){
   const nombre=(DB.perfil&&DB.perfil.nombre)||'';
   document.getElementById('home-sub').textContent=nombre?('Hola, '+nombre):'Hola';
+  registrarSnapshotPatrimonioSiCorresponde();
 
   const {ars,usd,porMoneda}=computeBalanceCuentas();
   const tc=DB.perfil.tipoCambio;
@@ -2094,6 +2099,72 @@ function renderCashflow(){
     '</div>'
     : gastoRowHtml(mv)
   ).join(''):'<div class="empty"><div class="empty-icon">📊</div><div class="empty-text">Sin movimientos este mes</div><div class="empty-sub">Cargá un ingreso o un gasto</div></div>';
+
+  renderTendenciaMeses();
+  renderPatrimonioHistorial();
+}
+
+const MESES_CORTOS=['Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov','Dic'];
+function computeTendenciaMeses(n){
+  const meses=[];
+  const hoy=new Date();
+  for(let i=n-1;i>=0;i--){
+    const d=new Date(hoy.getFullYear(), hoy.getMonth()-i, 1);
+    meses.push(d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0'));
+  }
+  return meses.map(mes=>{
+    const ing=(DB.ingresos||[]).filter(i=>i.fecha&&i.fecha.slice(0,7)===mes&&(i.moneda||'ARS')==='ARS').reduce((s,i)=>s+(i.monto||0),0);
+    const eg=(DB.gastos||[]).filter(g=>g.fecha&&g.fecha.slice(0,7)===mes&&(g.moneda||'ARS')==='ARS').reduce((s,g)=>s+(g.monto||0),0);
+    return {mes,ing,eg};
+  });
+}
+function renderTendenciaMeses(){
+  const el=document.getElementById('cf-tendencia');
+  const datos=computeTendenciaMeses(6);
+  if(!datos.some(d=>d.ing||d.eg)){ el.innerHTML='<div style="text-align:center;color:var(--text3);font-size:12px;padding:10px 0">Todavía no hay movimientos en ARS para mostrar tendencia</div>'; return; }
+  const max=Math.max(1,...datos.map(d=>Math.max(d.ing,d.eg)));
+  el.innerHTML='<div style="display:flex;align-items:flex-end;gap:8px;height:130px">'+
+    datos.map(d=>{
+      const hIng=Math.max(d.ing?Math.round(d.ing/max*100):0,d.ing?2:0);
+      const hEg=Math.max(d.eg?Math.round(d.eg/max*100):0,d.eg?2:0);
+      const mesNum=parseInt(d.mes.slice(5,7),10);
+      return '<div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:4px;height:100%;justify-content:flex-end">'+
+        '<div style="display:flex;gap:2px;align-items:flex-end;height:100%;width:100%;justify-content:center">'+
+          '<div style="width:38%;height:'+hIng+'%;background:var(--green);border-radius:3px 3px 0 0"></div>'+
+          '<div style="width:38%;height:'+hEg+'%;background:var(--red);border-radius:3px 3px 0 0"></div>'+
+        '</div>'+
+        '<div style="font-size:10px;color:var(--text3)">'+MESES_CORTOS[mesNum-1]+'</div>'+
+      '</div>';
+    }).join('')+
+  '</div>'+
+  '<div style="display:flex;gap:14px;justify-content:center;margin-top:8px;font-size:11px;color:var(--text3)"><span>🟢 Ingresos</span><span>🔴 Egresos</span></div>';
+}
+async function registrarSnapshotPatrimonioSiCorresponde(){
+  const mesActual=fechaHoy().slice(0,7);
+  if(DB.ultimoSnapshotPatrimonio===mesActual) return;
+  const {ars,usd}=computeBalanceCuentas();
+  const invArs=(DB.inversiones||[]).filter(i=>(i.moneda||'ARS')==='ARS').reduce((s,i)=>s+(i.actual||0),0);
+  if(!DB.historialPatrimonio) DB.historialPatrimonio=[];
+  DB.historialPatrimonio.push({mes:mesActual, ars:ars+invArs, usd});
+  DB.historialPatrimonio=DB.historialPatrimonio.slice(-24);
+  DB.ultimoSnapshotPatrimonio=mesActual;
+  await save();
+}
+function renderPatrimonioHistorial(){
+  const el=document.getElementById('cf-patrimonio-historial');
+  const hist=DB.historialPatrimonio||[];
+  if(hist.length<2){ el.innerHTML='<div style="text-align:center;color:var(--text3);font-size:12px;padding:10px 0">Todavía no hay suficiente historial — se registra automáticamente un snapshot por mes. Volvé el próximo mes para ver la evolución.</div>'; return; }
+  const max=Math.max(1,...hist.map(h=>h.ars));
+  el.innerHTML='<div style="display:flex;align-items:flex-end;gap:6px;height:110px">'+
+    hist.map(h=>{
+      const hgt=Math.max(h.ars?Math.round(h.ars/max*100):0,2);
+      const mesNum=parseInt(h.mes.slice(5,7),10);
+      return '<div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:4px;height:100%;justify-content:flex-end">'+
+        '<div style="width:60%;height:'+hgt+'%;background:var(--accent);border-radius:3px 3px 0 0"></div>'+
+        '<div style="font-size:9px;color:var(--text3)">'+MESES_CORTOS[mesNum-1]+'</div>'+
+      '</div>';
+    }).join('')+
+  '</div>';
 }
 
 let _monedaIngreso='ARS', _catIngreso='sueldo';
