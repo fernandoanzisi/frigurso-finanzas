@@ -749,10 +749,19 @@
       <div id="vd-ruta-resultado" style="font-size:12px;color:var(--text3)">Buscá origen y destino, después tocá "Calcular ruta completa"</div>
 
       <div id="vd-combustible-wrap" style="display:none;margin-top:12px;border-top:1px solid var(--border);padding-top:10px">
-        <div class="field-label">⛽ Tu auto</div>
+        <div class="field-label">⛽ Tu vehículo</div>
+        <div class="pill-sel" id="vd-vehiculo-tipo-pills" style="margin-bottom:8px"></div>
+        <input type="text" class="input" id="vd-vehiculo-marca" placeholder="Marca y modelo (opcional) — Ej: Toyota Corolla" style="margin-bottom:8px" oninput="guardarMarcaVehiculo(document.getElementById('vd-titulo').dataset.viajeId)">
+        <div class="pill-sel" id="vd-combustible-tipo-pills" style="margin-bottom:8px"></div>
         <div style="display:flex;gap:8px">
-          <input type="number" class="input" id="vd-consumo" placeholder="km por litro" step="0.1" style="flex:1" oninput="recalcularCombustible(document.getElementById('vd-titulo').dataset.viajeId)">
-          <input type="number" class="input" id="vd-precio-litro" placeholder="$ por litro" step="1" style="flex:1" oninput="recalcularCombustible(document.getElementById('vd-titulo').dataset.viajeId)">
+          <div style="flex:1">
+            <div id="vd-consumo-label" style="font-size:10px;color:var(--text3);margin-bottom:3px">Rendimiento (km por litro)</div>
+            <input type="number" class="input" id="vd-consumo" placeholder="Ej: 10" step="0.1" oninput="recalcularCombustible(document.getElementById('vd-titulo').dataset.viajeId)">
+          </div>
+          <div style="flex:1">
+            <div id="vd-precio-label" style="font-size:10px;color:var(--text3);margin-bottom:3px">Precio del litro</div>
+            <input type="number" class="input" id="vd-precio-litro" placeholder="Ej: 1200" step="1" oninput="recalcularCombustible(document.getElementById('vd-titulo').dataset.viajeId)">
+          </div>
         </div>
         <div id="vd-combustible-resultado" style="font-size:13px;margin-top:6px"></div>
       </div>
@@ -2952,6 +2961,57 @@ function renderRutaResultado(v){
   document.getElementById('vd-combustible-wrap').style.display='block';
   document.getElementById('vd-maps-wrap').style.display='block';
 }
+const TIPOS_VEHICULO=[
+  {id:'auto',label:'🚗 Auto'},
+  {id:'moto',label:'🏍️ Moto'},
+];
+const TIPOS_COMBUSTIBLE=[
+  {id:'nafta',label:'⛽ Nafta'},
+  {id:'diesel',label:'🛢️ Diesel'},
+  {id:'gnc',label:'🔵 GNC'},
+  {id:'electrico',label:'⚡ Eléctrico'},
+];
+function renderVehiculoTipoPills(v){
+  document.getElementById('vd-vehiculo-tipo-pills').innerHTML=TIPOS_VEHICULO.map(t=>
+    '<button type="button" class="pill '+(t.id===(v.vehiculoTipo||'auto')?'sel':'')+'" onclick="setTipoVehiculo(\''+v.id+'\',\''+t.id+'\')">'+t.label+'</button>'
+  ).join('');
+}
+function renderCombustibleTipoPills(v){
+  document.getElementById('vd-combustible-tipo-pills').innerHTML=TIPOS_COMBUSTIBLE.map(t=>
+    '<button type="button" class="pill '+(t.id===(v.vehiculoCombustible||'nafta')?'sel':'')+'" onclick="setTipoCombustible(\''+v.id+'\',\''+t.id+'\')">'+t.label+'</button>'
+  ).join('');
+}
+function actualizarLabelsCombustible(v){
+  const esElectrico=v.vehiculoCombustible==='electrico';
+  const esMoto=v.vehiculoTipo==='moto';
+  document.getElementById('vd-consumo-label').textContent=esElectrico?'Rendimiento (km por kWh)':'Rendimiento (km por litro)';
+  document.getElementById('vd-consumo').placeholder=esElectrico?'Ej: 6':(esMoto?'Ej: 35':'Ej: 10');
+  document.getElementById('vd-precio-label').textContent=esElectrico?'Precio del kWh':'Precio del litro';
+  document.getElementById('vd-precio-litro').placeholder=esElectrico?'Ej: 150':'Ej: 1200';
+}
+async function setTipoVehiculo(viajeId,tipo){
+  const v=DB.viajes.find(x=>x.id===viajeId);
+  if(!v) return;
+  v.vehiculoTipo=tipo;
+  await save();
+  renderVehiculoTipoPills(v);
+  actualizarLabelsCombustible(v);
+}
+async function setTipoCombustible(viajeId,tipo){
+  const v=DB.viajes.find(x=>x.id===viajeId);
+  if(!v) return;
+  v.vehiculoCombustible=tipo;
+  await save();
+  renderCombustibleTipoPills(v);
+  actualizarLabelsCombustible(v);
+  renderCombustible(v);
+}
+async function guardarMarcaVehiculo(viajeId){
+  const v=DB.viajes.find(x=>x.id===viajeId);
+  if(!v) return;
+  v.vehiculoMarca=document.getElementById('vd-vehiculo-marca').value;
+  await save();
+}
 function recalcularCombustible(viajeId){
   const v=DB.viajes.find(x=>x.id===viajeId);
   if(!v||!v.rutaKm) return;
@@ -2961,17 +3021,22 @@ function recalcularCombustible(viajeId){
   renderCombustible(v);
 }
 function renderCombustible(v){
+  document.getElementById('vd-vehiculo-marca').value=v.vehiculoMarca||'';
+  renderVehiculoTipoPills(v);
+  renderCombustibleTipoPills(v);
+  actualizarLabelsCombustible(v);
   document.getElementById('vd-consumo').value=v.combustibleConsumo||'';
   document.getElementById('vd-precio-litro').value=v.combustiblePrecioLitro||'';
   const el=document.getElementById('vd-combustible-resultado');
   if(!v.rutaKm||!v.combustibleConsumo||!v.combustiblePrecioLitro){ el.textContent=''; return; }
-  const litrosIda=v.rutaKm/v.combustibleConsumo;
-  const litrosIdaVuelta=litrosIda*2;
-  const costoIda=litrosIda*v.combustiblePrecioLitro;
-  const costoIdaVuelta=litrosIdaVuelta*v.combustiblePrecioLitro;
+  const unidad=v.vehiculoCombustible==='electrico'?'kWh':'litros';
+  const cantIda=v.rutaKm/v.combustibleConsumo;
+  const cantIdaVuelta=cantIda*2;
+  const costoIda=cantIda*v.combustiblePrecioLitro;
+  const costoIdaVuelta=cantIdaVuelta*v.combustiblePrecioLitro;
   el.innerHTML=
-    '<div>Solo ida: '+litrosIda.toFixed(1)+' litros ≈ <b style="color:var(--accent)">'+fmtMoney(costoIda,'ARS')+'</b></div>'+
-    '<div>Ida y vuelta: '+litrosIdaVuelta.toFixed(1)+' litros ≈ <b style="color:var(--accent)">'+fmtMoney(costoIdaVuelta,'ARS')+'</b></div>';
+    '<div>Solo ida: '+cantIda.toFixed(1)+' '+unidad+' ≈ <b style="color:var(--accent)">'+fmtMoney(costoIda,'ARS')+'</b></div>'+
+    '<div>Ida y vuelta: '+cantIdaVuelta.toFixed(1)+' '+unidad+' ≈ <b style="color:var(--accent)">'+fmtMoney(costoIdaVuelta,'ARS')+'</b></div>';
 }
 function climaLabel(code){
   const map={
