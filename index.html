@@ -574,6 +574,7 @@
     </div>
     <div class="field-wrap"><div class="field-label">Límite</div><input type="number" class="input" id="ta-limite" placeholder="0" step="0.01"></div>
     <div class="field-wrap"><div class="field-label">Saldo usado</div><input type="number" class="input" id="ta-saldo" placeholder="0" step="0.01"></div>
+    <div class="field-wrap"><div class="field-label">Tasa de interés por financiación (TNA %, opcional — la encontrás en tu resumen)</div><input type="number" class="input" id="ta-tasa" placeholder="Ej: 150" step="0.1"></div>
     <div class="field-wrap"><div class="field-label">Día de cierre</div><input type="number" class="input" id="ta-cierre" min="1" max="31" placeholder="Ej: 15"></div>
     <div class="field-wrap"><div class="field-label">Día de vencimiento</div><input type="number" class="input" id="ta-vencimiento" min="1" max="31" placeholder="Ej: 22"></div>
     <button class="btn-primary" onclick="guardarTarjeta()">Guardar tarjeta</button>
@@ -1944,6 +1945,14 @@ function renderCuentas(){
   document.getElementById('tarjetas-lista').innerHTML=tarjetas.length?tarjetas.map(t=>{
     const disp=Math.max(0,(t.limite||0)-(t.saldoUsado||0));
     const pct=t.limite?Math.min(100,Math.round((t.saldoUsado||0)/t.limite*100)):0;
+    let costoHtml='';
+    if(t.tasaInteres>0&&t.saldoUsado>0){
+      const tasaMensual=t.tasaInteres/100/12;
+      const proyeccion=[3,6,12].map(m=>Math.round(t.saldoUsado*Math.pow(1+tasaMensual,m)));
+      costoHtml='<div style="margin-top:8px;padding-top:8px;border-top:1px solid var(--border);font-size:11px;color:var(--red);line-height:1.6">'+
+        '💸 Si no pagás nada (TNA '+t.tasaInteres+'%): a 3 meses <b>'+fmtMoney(proyeccion[0],t.moneda)+'</b> · a 6 meses <b>'+fmtMoney(proyeccion[1],t.moneda)+'</b> · a 12 meses <b>'+fmtMoney(proyeccion[2],t.moneda)+'</b>'+
+      '</div>';
+    }
     return '<div class="row-item" onclick="abrirModalTarjeta(\''+t.id+'\')" style="flex-direction:column;align-items:stretch">'+
       '<div style="display:flex;align-items:center;gap:12px;width:100%">'+
         '<div class="row-icon" style="background:rgba(212,175,55,.15)">💳</div>'+
@@ -1951,6 +1960,7 @@ function renderCuentas(){
         '<div class="row-amt"><div class="row-amt-val" style="color:var(--red)">'+fmtMoney(t.saldoUsado,t.moneda)+'</div><div class="row-amt-lbl">de '+fmtMoney(t.limite,t.moneda)+'</div></div>'+
       '</div>'+
       '<div style="height:5px;border-radius:99px;background:var(--bg3);margin-top:8px"><div style="height:100%;width:'+pct+'%;border-radius:99px;background:'+(pct>85?'var(--red)':'var(--gold)')+'"></div></div>'+
+      costoHtml+
     '</div>';
   }).join(''):'<div style="text-align:center;color:var(--text3);font-size:12px;padding:10px 0">Sin tarjetas cargadas</div>';
 
@@ -2001,6 +2011,7 @@ function abrirModalTarjeta(id){
   document.getElementById('ta-nombre').value=t?t.nombre:'';
   document.getElementById('ta-limite').value=t?t.limite:'';
   document.getElementById('ta-saldo').value=t?t.saldoUsado:'';
+  document.getElementById('ta-tasa').value=t?(t.tasaInteres||''):'';
   document.getElementById('ta-cierre').value=t?(t.cierre||''):'';
   document.getElementById('ta-vencimiento').value=t?(t.vencimiento||''):'';
   document.getElementById('modal-tarjeta-title').textContent=t?'Editar tarjeta':'Nueva tarjeta';
@@ -2017,6 +2028,7 @@ async function guardarTarjeta(){
     id:id||uid(), nombre, moneda:_monedaTarjeta,
     limite:parseFloat(document.getElementById('ta-limite').value)||0,
     saldoUsado:parseFloat(document.getElementById('ta-saldo').value)||0,
+    tasaInteres:parseFloat(document.getElementById('ta-tasa').value)||0,
     cierre:parseInt(document.getElementById('ta-cierre').value)||null,
     vencimiento:parseInt(document.getElementById('ta-vencimiento').value)||null,
   };
