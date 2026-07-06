@@ -210,6 +210,7 @@
         <div class="splash-greet" id="splash-saludo">¡Bienvenido!</div>
         <div class="splash-tag">Tu plataforma financiera personal.</div>
         <div class="splash-desc">Gastos, inversiones, viajes y mucho más, todo en un solo lugar.</div>
+        <div class="splash-desc" id="splash-alerta" style="display:none;color:var(--gold);font-weight:700;margin-top:5px"></div>
       </div>
     </div>
     <div class="splash-mkt" id="splash-mkt" style="display:none">
@@ -461,6 +462,11 @@
     <button class="admin-menu-btn" id="btn-huella-toggle" onclick="toggleHuella()">
       <span class="admin-menu-icon">👆</span>
       <span class="admin-menu-txt"><span class="admin-menu-titulo" id="huella-toggle-titulo">Activar huella / Face ID</span><span class="admin-menu-sub">Atajo de acceso en este dispositivo</span></span>
+      <span class="admin-menu-arrow">›</span>
+    </button>
+    <button class="admin-menu-btn" onclick="abrirHistorialAcceso()">
+      <span class="admin-menu-icon">🕓</span>
+      <span class="admin-menu-txt"><span class="admin-menu-titulo">Actividad de acceso</span><span class="admin-menu-sub">Ingresos e intentos fallidos a tu perfil</span></span>
       <span class="admin-menu-arrow">›</span>
     </button>
     <button class="admin-menu-btn" onclick="forzarUpdate()">
@@ -974,6 +980,16 @@
   </div>
 </div>
 
+<!-- MODAL HISTORIAL DE ACCESO -->
+<div class="modal-overlay" id="modal-historial-acceso" onclick="if(event.target===this)cerrarModal('historial-acceso')">
+  <div class="modal" style="max-height:80dvh">
+    <div class="modal-title">🕓 Actividad de acceso</div>
+    <div style="font-size:11px;color:var(--text3);margin-bottom:12px;line-height:1.5">Ingresos e intentos fallidos a tu perfil en este dispositivo. Se guarda solo acá, nunca sale del teléfono.</div>
+    <div id="historial-acceso-lista"></div>
+    <button class="btn-ghost" onclick="cerrarModal('historial-acceso')">Cerrar</button>
+  </div>
+</div>
+
 <div class="toast" id="toast"></div>
 
 <script>
@@ -1176,6 +1192,43 @@ function _msEsperaPorIntentos(intentos){
   if(intentos<3) return 0;
   return Math.min(30000, 1000*Math.pow(2,intentos-3)); // 1s,2s,4s...hasta 30s
 }
+
+// ── Historial de accesos (éxito/fallido) por perfil, guardado local, fuera del blob encriptado ──
+let _fallidosPrevios=0;
+function _historialAcceso(perfilId){
+  try{ return JSON.parse(localStorage.getItem('ff_historial_'+perfilId)||'[]'); }catch(e){ return []; }
+}
+function _registrarAcceso(perfilId,tipo){
+  const hist=_historialAcceso(perfilId);
+  hist.push({tipo,fecha:Date.now()});
+  localStorage.setItem('ff_historial_'+perfilId, JSON.stringify(hist.slice(-30)));
+}
+function _contarFallidosDesdeUltimoExito(perfilId){
+  const hist=_historialAcceso(perfilId);
+  let n=0;
+  for(let i=hist.length-1;i>=0;i--){
+    if(hist[i].tipo==='exito') break;
+    n++;
+  }
+  return n;
+}
+function fmtFechaHora(ms){
+  const d=new Date(ms);
+  const fecha=String(d.getDate()).padStart(2,'0')+'/'+String(d.getMonth()+1).padStart(2,'0')+'/'+d.getFullYear();
+  const hora=String(d.getHours()).padStart(2,'0')+':'+String(d.getMinutes()).padStart(2,'0');
+  return fecha+' · '+hora;
+}
+function abrirHistorialAcceso(){
+  const id=_perfilSeleccionadoId;
+  const hist=_historialAcceso(id).slice().reverse();
+  document.getElementById('historial-acceso-lista').innerHTML=hist.length?hist.map(h=>
+    '<div class="row-item static">'+
+      '<div class="row-icon" style="background:'+(h.tipo==='exito'?'rgba(34,197,94,.15)':'rgba(248,113,113,.15)')+'">'+(h.tipo==='exito'?'✅':'❌')+'</div>'+
+      '<div class="row-main"><div class="row-title">'+(h.tipo==='exito'?'Ingreso exitoso':'Intento fallido')+'</div><div class="row-sub">'+fmtFechaHora(h.fecha)+'</div></div>'+
+    '</div>'
+  ).join(''):'<div style="text-align:center;color:var(--text3);font-size:12px;padding:16px 0">Sin actividad registrada todavía</div>';
+  abrirModal('historial-acceso');
+}
 async function ingresar(){
   hideErrAuth('ai-err');
   const id=_perfilSeleccionadoId;
@@ -1196,9 +1249,12 @@ async function ingresar(){
     const data=await _decryptJSON(blob, key);
     _key=key; DB=data;
     localStorage.removeItem(intentosKey);
+    _fallidosPrevios=_contarFallidosDesdeUltimoExito(id);
+    _registrarAcceso(id,'exito');
     onDesbloqueado();
   }catch(e){
     localStorage.setItem(intentosKey, String(intentos+1));
+    _registrarAcceso(id,'fallido');
     showErrAuth('ai-err','Contraseña incorrecta');
   }
 }
@@ -1257,8 +1313,10 @@ async function ingresarConHuella(){
     _key=await crypto.subtle.importKey('raw', rawKey, {name:'AES-GCM'}, true, ['encrypt','decrypt']);
     const blob=JSON.parse(localStorage.getItem('ff_blob_'+id));
     DB=await _decryptJSON(blob, _key);
+    _fallidosPrevios=_contarFallidosDesdeUltimoExito(id);
+    _registrarAcceso(id,'exito');
     onDesbloqueado();
-  }catch(e){ toast('No se pudo verificar la huella'); }
+  }catch(e){ _registrarAcceso(id,'fallido'); toast('No se pudo verificar la huella'); }
 }
 
 function actualizarBotonHuella(){
@@ -1284,6 +1342,14 @@ function onDesbloqueado(){
 function mostrarSplashBienvenida(){
   const nombre=(DB.perfil&&DB.perfil.nombre)||'';
   document.getElementById('splash-saludo').textContent=nombre?('¡Bienvenido, '+nombre+'!'):'¡Bienvenido!';
+  const alertaEl=document.getElementById('splash-alerta');
+  if(_fallidosPrevios>0){
+    alertaEl.textContent='⚠️ Hubo '+_fallidosPrevios+' intento'+(_fallidosPrevios===1?'':'s')+' fallido'+(_fallidosPrevios===1?'':'s')+' antes de este ingreso.';
+    alertaEl.style.display='block';
+  } else {
+    alertaEl.style.display='none';
+  }
+  _fallidosPrevios=0;
   document.getElementById('splash-screen').style.display='flex';
   cargarDolarSplash();
   dibujarGraficoSplash();
