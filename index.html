@@ -298,6 +298,32 @@
   </div>
 </div>
 
+<!-- MERCADO -->
+<div class="page" id="page-mercado">
+  <div class="header"><div style="display:flex;align-items:center;gap:8px;width:100%"><button class="btn-icon" onclick="navGo('mas',document.getElementById('nav-mas'))">←</button><div class="header-title">💹 Mercado</div></div></div>
+  <div style="padding:14px">
+    <div id="mkt-estado" style="font-size:11px;color:var(--text3);margin-bottom:10px"></div>
+    <button class="btn-ghost" onclick="actualizarMercado()">🔄 Actualizar datos de mercado</button>
+
+    <div class="section-title" style="margin-top:14px">Dólar hoy</div>
+    <div id="mkt-dolares"></div>
+
+    <div class="section-title" style="margin-top:14px">Riesgo país e inflación</div>
+    <div id="mkt-indicadores" class="card"></div>
+
+    <div class="section-title" style="margin-top:14px">Criptomonedas</div>
+    <div id="mkt-cripto"></div>
+
+    <div class="section-title" style="margin-top:14px">Mejores tasas de plazo fijo</div>
+    <div id="mkt-plazofijo"></div>
+
+    <div class="section-title" style="margin-top:14px">🤖 Análisis de tu cartera</div>
+    <div id="mkt-analisis"></div>
+
+    <div style="font-size:10px;color:var(--text3);text-align:center;margin-top:16px;line-height:1.5">Esta información se arma con datos públicos (dolarapi.com, argentinadatos.com, CoinGecko) y no es asesoramiento financiero profesional. Las decisiones de inversión son tuyas. Tus datos personales nunca se envían a estos servicios.</div>
+  </div>
+</div>
+
 <!-- MAS -->
 <div class="page" id="page-mas">
   <div class="header"><div class="header-title">📋 Más</div></div>
@@ -305,6 +331,11 @@
     <button class="admin-menu-btn" onclick="navGo('cashflow',document.getElementById('nav-mas'))">
       <span class="admin-menu-icon">📊</span>
       <span class="admin-menu-txt"><span class="admin-menu-titulo">Cashflow</span><span class="admin-menu-sub" id="mas-cf-sub">—</span></span>
+      <span class="admin-menu-arrow">›</span>
+    </button>
+    <button class="admin-menu-btn" onclick="navGo('mercado',document.getElementById('nav-mas'))">
+      <span class="admin-menu-icon">💹</span>
+      <span class="admin-menu-txt"><span class="admin-menu-titulo">Mercado e inversión</span><span class="admin-menu-sub" id="mas-mkt-sub">Dólar, tasas, cripto y análisis de tu cartera</span></span>
       <span class="admin-menu-arrow">›</span>
     </button>
     <button class="admin-menu-btn" onclick="navGo('inversiones',document.getElementById('nav-mas'))">
@@ -849,6 +880,7 @@ function _dbVacia(){
     perfil:{nombre:'',email:'',tipoCambio:null},
     gastos:[], ingresos:[], cuentas:[], tarjetas:[], prestamos:[], compromisos:[],
     inversiones:[], proyectos:[], viajes:[],
+    mercado:null,
     ultimoBackup:null,
   };
 }
@@ -1249,6 +1281,7 @@ function navGo(page,btn){
   if(page==='cuentas') renderCuentas();
   if(page==='viajes'){ renderViajes(); document.getElementById('fab-viajes').style.display=''; }
   if(page==='cashflow') renderCashflow();
+  if(page==='mercado'){ if(!DB.mercado) actualizarMercado(); else renderMercado(); }
   if(page==='mas') renderMas();
   if(page==='inversiones'){ renderInversiones(); document.getElementById('fab-inversiones').style.display=''; }
   if(page==='proyectos'){ renderProyectos(); document.getElementById('fab-proyectos').style.display=''; }
@@ -1699,6 +1732,152 @@ async function borrarInversion(){
   DB.inversiones=DB.inversiones.filter(i=>i.id!==id);
   await save(); cerrarModal('inversion'); renderInversiones();
   toast('🗑 Inversión eliminada');
+}
+
+// ═══════════════════════════════════════════════════════════════
+// MERCADO — dólar, cripto, tasas e inflación (APIs públicas gratuitas, sin key)
+// y análisis automático de tu cartera (todo se calcula en el dispositivo)
+// ═══════════════════════════════════════════════════════════════
+async function actualizarMercado(){
+  const estado=document.getElementById('mkt-estado');
+  if(estado) estado.textContent='Actualizando datos de mercado...';
+  try{
+    const [dolares,inflacion,riesgoPais,plazoFijo,cripto]=await Promise.all([
+      fetch('https://dolarapi.com/v1/dolares').then(r=>r.json()).catch(()=>null),
+      fetch('https://api.argentinadatos.com/v1/finanzas/indices/inflacion').then(r=>r.json()).catch(()=>null),
+      fetch('https://api.argentinadatos.com/v1/finanzas/indices/riesgo-pais/ultimo').then(r=>r.json()).catch(()=>null),
+      fetch('https://api.argentinadatos.com/v1/finanzas/tasas/plazoFijo').then(r=>r.json()).catch(()=>null),
+      fetch('https://api.coingecko.com/api/v3/simple/price?ids=bitcoin,ethereum&vs_currencies=usd&include_24hr_change=true').then(r=>r.json()).catch(()=>null),
+    ]);
+    if(!dolares&&!inflacion&&!riesgoPais&&!plazoFijo&&!cripto){
+      if(estado) estado.textContent='No se pudo actualizar — revisá tu conexión.';
+      toast('⚠️ No se pudo actualizar el mercado');
+      return;
+    }
+    DB.mercado={
+      actualizadoEn:Date.now(),
+      dolares: Array.isArray(dolares)?dolares:null,
+      inflacion: Array.isArray(inflacion)?inflacion.slice(-6):null,
+      riesgoPais: riesgoPais||null,
+      plazoFijo: Array.isArray(plazoFijo)?plazoFijo:null,
+      cripto: cripto||null,
+    };
+    await save();
+    renderMercado();
+    toast('✅ Datos de mercado actualizados');
+  }catch(e){
+    if(estado) estado.textContent='No se pudo actualizar — revisá tu conexión.';
+    toast('⚠️ No se pudo actualizar el mercado');
+  }
+}
+function renderMercado(){
+  const mkt=DB.mercado;
+  const estado=document.getElementById('mkt-estado');
+  if(!mkt){
+    if(estado) estado.textContent='Todavía no se cargaron datos de mercado. Tocá actualizar.';
+    ['mkt-dolares','mkt-indicadores','mkt-cripto','mkt-plazofijo','mkt-analisis'].forEach(id=>document.getElementById(id).innerHTML='');
+    return;
+  }
+  const mins=Math.round((Date.now()-mkt.actualizadoEn)/60000);
+  if(estado) estado.textContent='Actualizado hace '+(mins<1?'instantes':mins+' min');
+
+  const casasOrden=['oficial','blue','bolsa','contadoconliqui','cripto','tarjeta','mayorista'];
+  const dolares=(mkt.dolares||[]).slice().sort((a,b)=>casasOrden.indexOf(a.casa)-casasOrden.indexOf(b.casa));
+  document.getElementById('mkt-dolares').innerHTML=dolares.length?dolares.map(d=>
+    '<div class="row-item static">'+
+      '<div class="row-main"><div class="row-title">'+esc(d.nombre)+'</div><div class="row-sub">Compra '+fmtMoney(d.compra,'ARS')+'</div></div>'+
+      '<div class="row-amt"><div class="row-amt-val">'+fmtMoney(d.venta,'ARS')+'</div><div class="row-amt-lbl">venta</div></div>'+
+    '</div>'
+  ).join(''):'<div style="text-align:center;color:var(--text3);font-size:12px;padding:10px">Sin datos</div>';
+
+  let indicHtml='';
+  if(mkt.riesgoPais&&mkt.riesgoPais.valor!=null){
+    const rp=mkt.riesgoPais.valor;
+    const nivel=rp<400?'Relativamente bajo':rp<800?'Moderado':'Alto';
+    const col=rp<400?'var(--green)':rp<800?'var(--gold)':'var(--red)';
+    indicHtml+='<div style="display:flex;justify-content:space-between;padding:4px 0"><span>Riesgo país (EMBI)</span><span style="font-family:var(--mono);font-weight:800;color:'+col+'">'+rp+' pb · '+nivel+'</span></div>';
+  }
+  if(mkt.inflacion&&mkt.inflacion.length){
+    const ultima=mkt.inflacion[mkt.inflacion.length-1];
+    indicHtml+='<div style="display:flex;justify-content:space-between;padding:4px 0"><span>Inflación último mes ('+fmtFecha(ultima.fecha)+')</span><span style="font-family:var(--mono);font-weight:800">'+ultima.valor+'%</span></div>';
+    const anualizada=(Math.pow(1+ultima.valor/100,12)-1)*100;
+    indicHtml+='<div style="display:flex;justify-content:space-between;padding:4px 0;font-size:11px;color:var(--text3)"><span>Equivalente anualizado</span><span style="font-family:var(--mono)">~'+Math.round(anualizada)+'%</span></div>';
+  }
+  document.getElementById('mkt-indicadores').innerHTML=indicHtml||'<div style="text-align:center;color:var(--text3);font-size:12px">Sin datos</div>';
+
+  const cr=mkt.cripto;
+  const criptoKeys=['bitcoin','ethereum'].filter(k=>cr&&cr[k]);
+  document.getElementById('mkt-cripto').innerHTML=criptoKeys.length?criptoKeys.map(k=>{
+    const d=cr[k];
+    const ch=d.usd_24h_change||0;
+    return '<div class="row-item static">'+
+      '<div class="row-main"><div class="row-title">'+(k==='bitcoin'?'₿ Bitcoin':'Ξ Ethereum')+'</div></div>'+
+      '<div class="row-amt"><div class="row-amt-val">'+fmtMoney(d.usd,'USD')+'</div><div class="row-amt-lbl" style="color:'+(ch>=0?'var(--green)':'var(--red)')+'">'+(ch>=0?'+':'')+ch.toFixed(1)+'% 24h</div></div>'+
+    '</div>';
+  }).join(''):'<div style="text-align:center;color:var(--text3);font-size:12px;padding:10px">Sin datos</div>';
+
+  const bancos=(mkt.plazoFijo||[]).filter(b=>b.tnaClientes).slice().sort((a,b)=>b.tnaClientes-a.tnaClientes).slice(0,5);
+  document.getElementById('mkt-plazofijo').innerHTML=bancos.length?bancos.map(b=>
+    '<div class="row-item static">'+
+      '<div class="row-main"><div class="row-title">'+esc(b.entidad)+'</div></div>'+
+      '<div class="row-amt"><div class="row-amt-val" style="color:var(--green)">'+b.tnaClientes+'%</div><div class="row-amt-lbl">TNA</div></div>'+
+    '</div>'
+  ).join(''):'<div style="text-align:center;color:var(--text3);font-size:12px;padding:10px">Sin datos</div>';
+
+  document.getElementById('mkt-analisis').innerHTML=generarAnalisisCartera(mkt);
+}
+function generarAnalisisCartera(mkt){
+  const tips=[];
+  const {ars:efectivoArs}=computeBalanceCuentas();
+  const inv=DB.inversiones||[];
+  const invArs=inv.filter(i=>i.moneda!=='USD').reduce((s,i)=>s+(i.actual||0),0);
+  const prestamosAFavorArs=(DB.prestamos||[]).filter(p=>p.tipo==='preste'&&!p.pagado&&p.moneda!=='USD').reduce((s,p)=>s+(p.monto||0),0);
+  const prestamosDeudaArs=(DB.prestamos||[]).filter(p=>p.tipo==='me_prestaron'&&!p.pagado&&p.moneda!=='USD').reduce((s,p)=>s+(p.monto||0),0);
+  const patrimonioArs=efectivoArs+invArs+prestamosAFavorArs-prestamosDeudaArs;
+  const mejorPlazoFijo=(mkt.plazoFijo||[]).filter(b=>b.tnaClientes).sort((a,b)=>b.tnaClientes-a.tnaClientes)[0]||null;
+
+  if(patrimonioArs>0&&efectivoArs>0){
+    const pctEfectivo=Math.round(efectivoArs/patrimonioArs*100);
+    if(pctEfectivo>=60){
+      let msg='Tenés el '+pctEfectivo+'% de tu patrimonio en pesos sin invertir.';
+      if(mkt.inflacion&&mkt.inflacion.length) msg+=' La inflación del último mes fue '+mkt.inflacion[mkt.inflacion.length-1].valor+'%, así que ese efectivo va perdiendo poder de compra con el tiempo.';
+      if(mejorPlazoFijo) msg+=' Una opción de bajo riesgo para evaluar es un plazo fijo — hoy la mejor tasa que encontramos es '+esc(mejorPlazoFijo.entidad)+' al '+mejorPlazoFijo.tnaClientes+'% TNA.';
+      tips.push({icon:'💡',msg});
+    }
+  }
+
+  if(mkt.dolares&&mkt.dolares.length){
+    const oficial=mkt.dolares.find(d=>d.casa==='oficial');
+    const blue=mkt.dolares.find(d=>d.casa==='blue');
+    if(oficial&&blue&&oficial.venta){
+      const brecha=Math.round((blue.venta-oficial.venta)/oficial.venta*100);
+      if(brecha>5) tips.push({icon:'📊',msg:'Hay una brecha del '+brecha+'% entre el dólar oficial ('+fmtMoney(oficial.venta,'ARS')+') y el blue ('+fmtMoney(blue.venta,'ARS')+'). Tenelo en cuenta si estás pensando dolarizar ahorros.'});
+    }
+  }
+
+  const deudaTarjetasArs=(DB.tarjetas||[]).filter(t=>t.moneda!=='USD').reduce((s,t)=>s+(t.saldoUsado||0),0);
+  if(deudaTarjetasArs>0&&efectivoArs>0&&deudaTarjetasArs>efectivoArs*0.5){
+    tips.push({icon:'⚠️',msg:'Tu deuda de tarjeta ('+fmtMoney(deudaTarjetasArs,'ARS')+') es alta en relación a tu efectivo disponible. El interés por no pagar el total suele ser muy caro en Argentina — si podés, priorizá cancelarla antes de invertir.'});
+  }
+
+  if(mkt.riesgoPais&&mkt.riesgoPais.valor>800){
+    tips.push({icon:'📉',msg:'El riesgo país está alto ('+mkt.riesgoPais.valor+' puntos), lo que suele reflejar más volatilidad en bonos y acciones argentinas.'});
+  }
+
+  const pfPropios=inv.filter(i=>i.tipo==='plazo_fijo'&&i.moneda!=='USD'&&i.inicial>0&&i.fecha&&i.actual>i.inicial);
+  if(pfPropios.length&&mejorPlazoFijo){
+    pfPropios.forEach(p=>{
+      const dias=Math.max(1,Math.round((Date.now()-new Date(p.fecha+'T00:00:00'))/86400000));
+      const tnaAprox=((p.actual-p.inicial)/p.inicial)/(dias/365)*100;
+      if(tnaAprox>0&&tnaAprox<mejorPlazoFijo.tnaClientes-3){
+        tips.push({icon:'🔁',msg:'Tu inversión "'+esc(p.nombre)+'" rinde ~'+tnaAprox.toFixed(1)+'% TNA aproximado. Hoy hay mejores tasas en el mercado (hasta '+mejorPlazoFijo.tnaClientes+'% en '+esc(mejorPlazoFijo.entidad)+') — al vencer podrías comparar antes de renovar.'});
+      }
+    });
+  }
+
+  if(!tips.length) tips.push({icon:'✅',msg:'Por ahora no detectamos alertas grandes en tu cartera según los datos cargados.'});
+
+  return tips.map(t=>'<div class="card"><div style="font-size:13px;line-height:1.5">'+t.icon+' '+t.msg+'</div></div>').join('');
 }
 
 // ═══════════════════════════════════════════════════════════════
@@ -2629,6 +2808,11 @@ function renderMas(){
   const egMes=(DB.gastos||[]).filter(g=>g.fecha&&g.fecha.slice(0,7)===mesActual);
   document.getElementById('mas-cf-sub').textContent=(ingMes.length||egMes.length)?(ingMes.length+' ingresos · '+egMes.length+' gastos este mes'):'Sin movimientos este mes';
 
+  if(DB.mercado&&DB.mercado.actualizadoEn){
+    const mins=Math.round((Date.now()-DB.mercado.actualizadoEn)/60000);
+    document.getElementById('mas-mkt-sub').textContent='Actualizado hace '+(mins<1?'instantes':mins+' min');
+  }
+
   const inv=DB.inversiones||[];
   const totalInvArs=inv.filter(i=>i.moneda!=='USD').reduce((s,i)=>s+(i.actual||0),0);
   document.getElementById('mas-inv-sub').textContent=inv.length?(inv.length+' inversiones · '+fmtMoney(totalInvArs,'ARS')):'Sin inversiones cargadas';
@@ -2722,6 +2906,7 @@ const PAGE_RENDER_FN={
   home:()=>renderHome(), gastos:()=>renderGastos(), cuentas:()=>renderCuentas(),
   viajes:()=>renderViajes(), cashflow:()=>renderCashflow(), mas:()=>renderMas(),
   inversiones:()=>renderInversiones(), proyectos:()=>renderProyectos(), compromisos:()=>renderCompromisos(),
+  mercado:()=>actualizarMercado(),
 };
 function refrescarPaginaActual(){
   const fn=PAGE_RENDER_FN[_pagActual];
