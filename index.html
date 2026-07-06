@@ -223,6 +223,11 @@
   </div>
   <div style="padding:14px">
     <div class="kpi-grid" style="padding:0;margin-bottom:14px" id="gastos-kpis"></div>
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px">
+      <div class="section-title" style="margin-bottom:0">Presupuestos</div>
+      <button class="btn-icon" style="font-size:14px" onclick="abrirModalPresupuesto()">＋</button>
+    </div>
+    <div id="presupuestos-lista" style="margin-bottom:14px"></div>
     <div class="section-title">Por categoría</div>
     <div class="card" id="gastos-por-categoria" style="margin-bottom:14px"></div>
     <div class="section-title">Historial</div>
@@ -230,6 +235,26 @@
   </div>
 </div>
 <button class="fab" id="fab-gastos" style="display:none" onclick="abrirModalGasto()">＋</button>
+
+<!-- MODAL PRESUPUESTO -->
+<div class="modal-overlay" id="modal-presupuesto" onclick="if(event.target===this)cerrarModal('presupuesto')">
+  <div class="modal">
+    <div class="modal-title" id="modal-presupuesto-title">+ Presupuesto</div>
+    <input type="hidden" id="pp-id">
+    <div class="field-wrap">
+      <div class="field-label">Categoría</div>
+      <div class="pill-sel" id="pp-cat-pills"></div>
+    </div>
+    <div class="field-wrap">
+      <div class="field-label">Moneda</div>
+      <select class="input moneda-select" id="pp-moneda" onchange="setMonedaPresupuesto(this.value)"></select>
+    </div>
+    <div class="field-wrap"><div class="field-label">Tope mensual</div><input type="number" class="input" id="pp-monto" placeholder="0" step="0.01"></div>
+    <button class="btn-primary" onclick="guardarPresupuesto()">Guardar</button>
+    <button class="btn-danger" id="btn-borrar-presupuesto" style="display:none" onclick="borrarPresupuesto()">🗑 Borrar</button>
+    <button class="btn-ghost" onclick="cerrarModal('presupuesto')">Cancelar</button>
+  </div>
+</div>
 
 <!-- CUENTAS -->
 <div class="page" id="page-cuentas">
@@ -919,7 +944,7 @@ function _dbVacia(){
   return {
     perfil:{nombre:'',email:'',tipoCambio:null},
     gastos:[], ingresos:[], cuentas:[], tarjetas:[], prestamos:[], compromisos:[],
-    inversiones:[], proyectos:[], viajes:[],
+    inversiones:[], proyectos:[], viajes:[], presupuestos:[],
     mercado:null,
     ultimoBackup:null,
   };
@@ -1445,6 +1470,8 @@ function renderGastos(){
     '<div class="kpi-box"><div class="kpi-val">'+monedaIcono(m)+' '+fmtMoney(porMonedaMes[m]||0,m)+'</div><div class="kpi-lbl">Este mes ('+m+')</div></div>'
   ).join('');
 
+  renderPresupuestos(gastosMes);
+
   const porCat={};
   gastosMes.forEach(g=>{ const k=g.categoria+'|'+g.moneda; porCat[k]=(porCat[k]||0)+(g.monto||0); });
   const entradas=Object.entries(porCat).sort((a,b)=>b[1]-a[1]);
@@ -1460,6 +1487,62 @@ function renderGastos(){
 
   document.getElementById('gastos-lista').innerHTML=gastos.length?gastos.map(gastoRowHtml).join(''):
     '<div class="empty"><div class="empty-icon">💸</div><div class="empty-text">Sin gastos</div><div class="empty-sub">Tocá + para cargar uno</div></div>';
+}
+
+function renderPresupuestos(gastosMes){
+  const el=document.getElementById('presupuestos-lista');
+  const presupuestos=DB.presupuestos||[];
+  el.innerHTML=presupuestos.length?presupuestos.map(p=>{
+    const gastado=gastosMes.filter(g=>g.categoria===p.categoria&&(g.moneda||'ARS')===p.moneda).reduce((s,g)=>s+(g.monto||0),0);
+    const pct=p.monto?Math.min(100,Math.round(gastado/p.monto*100)):0;
+    const color=pct>=100?'var(--red)':pct>=80?'var(--gold)':'var(--accent)';
+    return '<div class="card" onclick="abrirModalPresupuesto(\''+p.id+'\')" style="cursor:pointer;margin-bottom:8px">'+
+      '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px">'+
+        '<div style="font-weight:700;font-size:13px">'+catLabel(p.categoria)+'</div>'+
+        '<div style="font-size:12px;color:var(--text3)">'+fmtMoney(gastado,p.moneda)+' / '+fmtMoney(p.monto,p.moneda)+'</div>'+
+      '</div>'+
+      '<div style="height:6px;border-radius:99px;background:var(--bg3)"><div style="height:100%;width:'+pct+'%;border-radius:99px;background:'+color+'"></div></div>'+
+      (pct>=100?'<div style="font-size:11px;color:var(--red);margin-top:4px">🚨 Superaste el presupuesto</div>':pct>=80?'<div style="font-size:11px;color:var(--gold);margin-top:4px">⚠️ Cerca del límite</div>':'')+
+    '</div>';
+  }).join(''):'<div style="text-align:center;color:var(--text3);font-size:12px;padding:10px 0">Sin presupuestos configurados</div>';
+}
+let _catPresupuesto='comida', _monedaPresupuesto='ARS';
+function abrirModalPresupuesto(id){
+  const p=id?(DB.presupuestos||[]).find(x=>x.id===id):null;
+  document.getElementById('pp-id').value=p?p.id:'';
+  document.getElementById('pp-monto').value=p?p.monto:'';
+  document.getElementById('modal-presupuesto-title').textContent=p?'Editar presupuesto':'+ Presupuesto';
+  document.getElementById('btn-borrar-presupuesto').style.display=p?'':'none';
+  _catPresupuesto=p?p.categoria:'comida';
+  renderCatPresupuestoPills();
+  setMonedaPresupuesto(p?p.moneda:'ARS');
+  abrirModal('presupuesto');
+}
+function renderCatPresupuestoPills(){
+  document.getElementById('pp-cat-pills').innerHTML=CATEGORIAS_GASTO.map(c=>
+    '<button type="button" class="pill '+(c.id===_catPresupuesto?'sel':'')+'" onclick="_catPresupuesto=\''+c.id+'\';renderCatPresupuestoPills()">'+c.label+'</button>'
+  ).join('');
+}
+function setMonedaPresupuesto(m){ _monedaPresupuesto=m; document.getElementById('pp-moneda').value=m; }
+async function guardarPresupuesto(){
+  const monto=parseFloat(document.getElementById('pp-monto').value)||0;
+  if(monto<=0){ toast('⚠️ Ingresá un monto'); return; }
+  const id=document.getElementById('pp-id').value;
+  if(!DB.presupuestos) DB.presupuestos=[];
+  const existenteMismaCat=DB.presupuestos.find(p=>p.categoria===_catPresupuesto&&p.moneda===_monedaPresupuesto&&p.id!==id);
+  if(existenteMismaCat){ toast('⚠️ Ya existe un presupuesto para esa categoría y moneda'); return; }
+  const data={ id:id||uid(), categoria:_catPresupuesto, moneda:_monedaPresupuesto, monto };
+  if(id){ const idx=DB.presupuestos.findIndex(p=>p.id===id); if(idx>=0) DB.presupuestos[idx]=data; }
+  else DB.presupuestos.push(data);
+  await save(); cerrarModal('presupuesto'); renderGastos();
+  toast('✅ Presupuesto guardado');
+}
+async function borrarPresupuesto(){
+  const id=document.getElementById('pp-id').value;
+  if(!id||!confirm('¿Borrar este presupuesto?')) return;
+  DB.presupuestos=DB.presupuestos.filter(p=>p.id!==id);
+  await save(); cerrarModal('presupuesto'); renderGastos();
+  toast('🗑 Presupuesto eliminado');
 }
 
 let _fotoGastoData=null, _monedaGasto='ARS', _catGasto='comida';
@@ -1528,7 +1611,18 @@ async function guardarGasto(){
   if(id){ const idx=DB.gastos.findIndex(g=>g.id===id); if(idx>=0) DB.gastos[idx]=data; }
   else DB.gastos.push(data);
   await save(); cerrarModal('gasto'); renderGastos(); if(_pagActual==='home') renderHome();
-  toast('✅ Gasto guardado');
+  const alerta=checkAlertaPresupuesto(data.categoria,data.moneda);
+  toast(alerta||'✅ Gasto guardado');
+}
+function checkAlertaPresupuesto(categoria,moneda){
+  const p=(DB.presupuestos||[]).find(x=>x.categoria===categoria&&x.moneda===moneda);
+  if(!p||!p.monto) return null;
+  const mesActual=fechaHoy().slice(0,7);
+  const gastado=(DB.gastos||[]).filter(g=>g.categoria===categoria&&(g.moneda||'ARS')===moneda&&g.fecha&&g.fecha.slice(0,7)===mesActual).reduce((s,g)=>s+(g.monto||0),0);
+  const pct=Math.round(gastado/p.monto*100);
+  if(pct>=100) return '🚨 Superaste el presupuesto de '+catLabel(categoria)+' ('+pct+'%)';
+  if(pct>=80) return '⚠️ Ya usaste el '+pct+'% del presupuesto de '+catLabel(categoria);
+  return null;
 }
 async function borrarGasto(){
   const id=document.getElementById('g-id').value;
