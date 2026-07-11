@@ -237,6 +237,17 @@
   </div>
 </div>
 
+<div class="modal-overlay" id="modal-importar-backup" onclick="if(event.target===this)cerrarModal('importar-backup')">
+  <div class="modal">
+    <div class="modal-title">📥 Sumar backup</div>
+    <div style="font-size:13px;color:var(--text3);margin-bottom:14px">Este backup se va a sumar a lo que ya tenés en este dispositivo — no se borra nada existente.</div>
+    <div class="field-wrap"><input type="password" class="input" id="imp-pass" placeholder="Contraseña con la que se exportó" autocomplete="current-password"></div>
+    <div class="auth-err" id="imp-err"></div>
+    <button class="btn-primary" onclick="confirmarImportarBackup()">Sumar datos</button>
+    <button class="btn-ghost" onclick="cerrarModal('importar-backup')">Cancelar</button>
+  </div>
+</div>
+
 <div id="ptr-indicator">⬇️</div>
 
 <nav class="nav-bottom" id="navbar" style="display:none">
@@ -495,7 +506,7 @@
     </button>
     <label class="admin-menu-btn" style="cursor:pointer">
       <span class="admin-menu-icon">📥</span>
-      <span class="admin-menu-txt"><span class="admin-menu-titulo">Importar backup</span><span class="admin-menu-sub">Reemplaza todos los datos actuales</span></span>
+      <span class="admin-menu-txt"><span class="admin-menu-titulo">Sumar backup</span><span class="admin-menu-sub">Trae los datos de otro dispositivo, sin borrar los tuyos</span></span>
       <span class="admin-menu-arrow">›</span>
       <input type="file" accept=".ffbak,.json" style="display:none" onchange="importarDatos(event)">
     </label>
@@ -3780,9 +3791,12 @@ async function guardarTipoCambio(){
 }
 
 async function exportarDatos(){
-  const saltB64=localStorage.getItem('ff_salt');
+  // OJO: usar el salt del PERFIL activo (ff_perfiles), no la clave vieja 'ff_salt' -- esa
+  // quedó muerta desde que la app migró a perfiles múltiples, y exportaba backups con salt
+  // nulo que después no servían para nada al importarlos.
+  const perfil=_perfiles().find(p=>p.id===_perfilSeleccionadoId);
   const blob=await _encryptJSON(DB,_key);
-  const paquete={salt:saltB64, blob, exportadoEn:new Date().toISOString()};
+  const paquete={salt:perfil?perfil.salt:null, blob, exportadoEn:new Date().toISOString()};
   const json=JSON.stringify(paquete);
   const url=URL.createObjectURL(new Blob([json],{type:'application/json'}));
   const a=document.createElement('a'); a.href=url;
@@ -3794,6 +3808,34 @@ async function exportarDatos(){
   renderMas();
   toast('📦 Backup descargado (cifrado con tu contraseña actual)');
 }
+// Fusiona dbEntrante DENTRO de dbActual: agrega lo nuevo por id, nunca borra ni pisa lo que ya existe.
+function _fusionarDB(dbActual, dbEntrante){
+  let agregados=0;
+  const camposArray=['gastos','ingresos','cuentas','tarjetas','prestamos','compromisos','inversiones','proyectos','viajes','presupuestos'];
+  camposArray.forEach(campo=>{
+    if(!Array.isArray(dbActual[campo])) dbActual[campo]=[];
+    if(!Array.isArray(dbEntrante[campo])) return;
+    const idsActuales=new Set(dbActual[campo].map(r=>r.id));
+    dbEntrante[campo].forEach(r=>{
+      if(r&&r.id&&!idsActuales.has(r.id)){ dbActual[campo].push(r); idsActuales.add(r.id); agregados++; }
+    });
+  });
+  if(Array.isArray(dbEntrante.historialPatrimonio)){
+    if(!Array.isArray(dbActual.historialPatrimonio)) dbActual.historialPatrimonio=[];
+    const mesesActuales=new Set(dbActual.historialPatrimonio.map(h=>h.mes));
+    dbEntrante.historialPatrimonio.forEach(h=>{
+      if(h&&h.mes&&!mesesActuales.has(h.mes)){ dbActual.historialPatrimonio.push(h); mesesActuales.add(h.mes); agregados++; }
+    });
+  }
+  if(dbEntrante.perfil){
+    if(!dbActual.perfil) dbActual.perfil={nombre:'',email:'',tipoCambio:null};
+    if(!dbActual.perfil.nombre&&dbEntrante.perfil.nombre) dbActual.perfil.nombre=dbEntrante.perfil.nombre;
+    if(!dbActual.perfil.email&&dbEntrante.perfil.email) dbActual.perfil.email=dbEntrante.perfil.email;
+    if(dbActual.perfil.tipoCambio==null&&dbEntrante.perfil.tipoCambio!=null) dbActual.perfil.tipoCambio=dbEntrante.perfil.tipoCambio;
+  }
+  return agregados;
+}
+let _backupPendiente=null;
 function importarDatos(e){
   const file=e.target.files[0]; if(!file) return;
   const reader=new FileReader();
@@ -3801,14 +3843,34 @@ function importarDatos(e){
     try{
       const paquete=JSON.parse(ev.target.result);
       if(!paquete.salt||!paquete.blob) throw new Error();
-      if(!confirm('¿Reemplazar todos los datos actuales con este backup? Vas a tener que ingresar con la contraseña que tenías cuando lo exportaste. No se puede deshacer.')){ e.target.value=''; return; }
-      localStorage.setItem('ff_salt', paquete.salt);
-      localStorage.setItem('ff_blob', JSON.stringify(paquete.blob));
-      cerrarSesion();
-      toast('✅ Backup importado — ingresá con tu contraseña');
-    }catch(err){ toast('❌ Archivo inválido'); e.target.value=''; }
+      _backupPendiente=paquete;
+      document.getElementById('imp-pass').value='';
+      document.getElementById('imp-err').style.display='none';
+      abrirModal('importar-backup');
+    }catch(err){ toast('❌ Archivo inválido'); }
+    finally{ e.target.value=''; }
   };
   reader.readAsText(file);
+}
+async function confirmarImportarBackup(){
+  const errEl=document.getElementById('imp-err');
+  errEl.style.display='none';
+  if(!_backupPendiente){ cerrarModal('importar-backup'); return; }
+  const pass=document.getElementById('imp-pass').value;
+  if(!pass){ errEl.textContent='Ingresá la contraseña'; errEl.style.display='block'; return; }
+  try{
+    const keyEntrante=await _deriveKey(pass, _backupPendiente.salt);
+    const dbEntrante=await _decryptJSON(_backupPendiente.blob, keyEntrante);
+    const agregados=_fusionarDB(DB, dbEntrante);
+    await save();
+    _backupPendiente=null;
+    cerrarModal('importar-backup');
+    renderMas();
+    toast(agregados>0 ? '✅ Se sumaron '+agregados+' registros nuevos' : 'ℹ️ Ya tenías todo lo de ese backup');
+  }catch(err){
+    errEl.textContent='Contraseña incorrecta para ese backup';
+    errEl.style.display='block';
+  }
 }
 
 // ═══════════════════════════════════════════════════════════════
