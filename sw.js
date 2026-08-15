@@ -1,4 +1,4 @@
-const CACHE = 'finanzas-v4';
+const CACHE = 'finanzas-v5';
 const PRECACHE = ['./', './index.html', './manifest.json'];
 
 self.addEventListener('install', e => {

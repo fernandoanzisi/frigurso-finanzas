@@ -536,6 +536,11 @@
       <span class="admin-menu-txt"><span class="admin-menu-titulo">Compromisos</span><span class="admin-menu-sub" id="mas-comp-sub">—</span></span>
       <span class="admin-menu-arrow">›</span>
     </button>
+    <button class="admin-menu-btn" onclick="navGo('gastosgrupales',document.getElementById('nav-mas'))">
+      <span class="admin-menu-icon">🧾</span>
+      <span class="admin-menu-txt"><span class="admin-menu-titulo">Gastos grupales</span><span class="admin-menu-sub" id="mas-gg-sub">Cenas, asados y salidas repartidas entre todos</span></span>
+      <span class="admin-menu-arrow">›</span>
+    </button>
     <div class="sep"></div>
     <button class="admin-menu-btn" onclick="abrirModalTipoCambio()">
       <span class="admin-menu-icon">💱</span>
@@ -602,6 +607,111 @@
   <div style="padding:14px" id="compromisos-lista"></div>
 </div>
 <button class="fab" id="fab-compromisos" style="display:none" onclick="abrirModalCompromiso()">＋</button>
+
+<!-- GASTOS GRUPALES -->
+<div class="page" id="page-gastosgrupales">
+  <div class="header"><div style="display:flex;align-items:center;gap:8px;width:100%"><button class="btn-icon" onclick="navGo('mas',document.getElementById('nav-mas'))">←</button><div class="header-title">🧾 Gastos grupales</div></div></div>
+  <div style="padding:14px" id="gastosgrupales-lista"></div>
+</div>
+<button class="fab" id="fab-gastosgrupales" style="display:none" onclick="abrirModalGrupo()">＋</button>
+
+<!-- MODAL GRUPO DE GASTO -->
+<div class="modal-overlay" id="modal-grupo" onclick="if(event.target===this)cerrarModal('grupo')">
+  <div class="modal">
+    <div class="modal-title" id="modal-grupo-title">Nuevo evento</div>
+    <input type="hidden" id="gg-id">
+    <div class="field-wrap"><div class="field-label">Nombre</div><input type="text" class="input" id="gg-nombre" placeholder="Ej: Cena del viernes, Asado cumpleaños..."></div>
+    <div class="field-wrap"><div class="field-label">Fecha</div><input type="date" class="input" id="gg-fecha"></div>
+    <button class="btn-primary" onclick="guardarGrupo()">Guardar</button>
+    <button class="btn-danger" id="btn-borrar-grupo" onclick="borrarGrupo()" style="display:none">🗑 Borrar evento</button>
+    <button class="btn-ghost" onclick="cancelarModalGrupo()">Cancelar</button>
+  </div>
+</div>
+
+<!-- MODAL DETALLE DE GRUPO DE GASTO -->
+<div class="modal-overlay" id="modal-grupo-detalle" onclick="if(event.target===this)cerrarModal('grupo-detalle')">
+  <div class="modal" style="max-height:92dvh">
+    <div class="modal-title" id="gd-titulo">Evento</div>
+    <div id="gd-resumen" style="margin-bottom:10px"></div>
+    <button class="btn-ghost" style="margin-bottom:14px" onclick="editarGrupoDesdeDetalle()">✏️ Editar nombre / fecha</button>
+
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">
+      <div class="section-title" style="margin-bottom:0">👥 Participantes</div>
+      <button class="btn-icon" style="font-size:14px" onclick="abrirModalParticipanteGrupo(document.getElementById('gd-titulo').dataset.grupoId)">＋</button>
+    </div>
+    <div id="gd-participantes" style="display:flex;flex-direction:column;gap:6px;margin-bottom:14px"></div>
+
+    <div class="section-title" style="margin-top:4px">💰 Reparto de gastos</div>
+    <div id="gd-balance"></div>
+    <button type="button" class="btn-ghost" id="gd-btn-enviar-reporte" style="display:none;margin-bottom:14px" onclick="enviarReporteGrupo(document.getElementById('gd-titulo').dataset.grupoId)">📤 Enviar reporte de gastos</button>
+
+    <div class="section-title" style="margin-top:14px">Gastos cargados</div>
+    <div id="gd-gastos" style="margin-bottom:8px"></div>
+    <button class="btn-primary" onclick="abrirModalGastoGrupo(document.getElementById('gd-titulo').dataset.grupoId)">+ Agregar gasto</button>
+    <button class="btn-ghost" onclick="cerrarModal('grupo-detalle')">Cerrar</button>
+  </div>
+</div>
+
+<!-- MODAL PARTICIPANTE DE GRUPO DE GASTO -->
+<div class="modal-overlay" id="modal-grupo-participante" onclick="if(event.target===this)cerrarModal('grupo-participante')">
+  <div class="modal">
+    <div class="modal-title" id="modal-grupo-participante-title">+ Participante</div>
+    <input type="hidden" id="gp-grupo-id">
+    <input type="hidden" id="gp-participante-id">
+    <div class="field-wrap"><div class="field-label">Nombre</div><input type="text" class="input" id="gp-nombre" placeholder="Nombre"></div>
+    <button class="btn-primary" onclick="guardarParticipanteGrupo()">Guardar</button>
+    <button class="btn-danger" id="btn-borrar-participante-grupo" onclick="borrarParticipanteGrupo()" style="display:none">🗑 Sacar participante</button>
+    <button class="btn-ghost" onclick="volverAGrupoDetalleDesdeParticipante()">Cancelar</button>
+  </div>
+</div>
+
+<!-- MODAL GASTO DE GRUPO -->
+<div class="modal-overlay" id="modal-grupo-gasto" onclick="if(event.target===this)cerrarModal('grupo-gasto')">
+  <div class="modal">
+    <div class="modal-title" id="modal-grupo-gasto-title">+ Gasto</div>
+    <input type="hidden" id="gi-grupo-id">
+    <div class="field-wrap"><div class="field-label">Qué se compró</div><input type="text" class="input" id="gi-concepto" placeholder="Ej: Carne, ensaladas, bebidas..."></div>
+    <div class="field-wrap">
+      <div class="field-label">Categoría</div>
+      <div class="pill-sel" id="gi-cat-pills"></div>
+    </div>
+    <div class="field-wrap">
+      <div class="field-label">Moneda</div>
+      <select class="input moneda-select" id="gi-moneda" onchange="setMonedaGastoGrupo(this.value)"></select>
+    </div>
+    <div class="field-wrap"><div class="field-label">Monto</div><input type="number" class="input" id="gi-monto" placeholder="0" step="0.01"></div>
+    <div class="field-wrap">
+      <div class="field-label">Pagó</div>
+      <select class="input" id="gi-pagador" style="margin-bottom:10px"></select>
+      <div class="field-label">Se reparte entre</div>
+      <div class="pill-sel" id="gi-participantes-pills"></div>
+    </div>
+    <button class="btn-primary" onclick="guardarGastoGrupo()">Guardar gasto</button>
+    <button class="btn-danger" id="btn-borrar-gasto-grupo" onclick="borrarGastoGrupo()" style="display:none">🗑 Borrar gasto</button>
+    <button class="btn-ghost" onclick="volverAGrupoDetalleDesdeGasto()">Cancelar</button>
+  </div>
+</div>
+
+<!-- MODAL PAGO/APORTE DE GRUPO -->
+<div class="modal-overlay" id="modal-grupo-pago" onclick="if(event.target===this)cerrarModal('grupo-pago')">
+  <div class="modal">
+    <div class="modal-title">💵 Registrar pago</div>
+    <input type="hidden" id="gpg-grupo-id">
+    <input type="hidden" id="gpg-pago-id">
+    <div class="field-wrap"><div class="field-label">Participante</div><select class="input" id="gpg-participante"></select></div>
+    <div class="field-wrap">
+      <div class="field-label">Medio de pago</div>
+      <div class="pill-sel" id="gpg-medio-pills"></div>
+    </div>
+    <div class="field-wrap"><div class="field-label">Moneda</div><select class="input moneda-select" id="gpg-moneda" onchange="setMonedaPagoGrupo(this.value)"></select></div>
+    <div class="field-wrap"><div class="field-label">Monto</div><input type="number" class="input" id="gpg-monto" placeholder="0" step="0.01"></div>
+    <div class="field-wrap"><div class="field-label">Fecha</div><input type="date" class="input" id="gpg-fecha"></div>
+    <div class="field-wrap"><div class="field-label">Nota (opcional)</div><input type="text" class="input" id="gpg-nota" placeholder="Ej: A Carlos"></div>
+    <button class="btn-primary" onclick="guardarPagoGrupo()">Guardar pago</button>
+    <button class="btn-danger" id="btn-borrar-pago-grupo" onclick="borrarPagoGrupo()" style="display:none">🗑 Borrar pago</button>
+    <button class="btn-ghost" onclick="volverAGrupoDetalleDesdePago()">Cancelar</button>
+  </div>
+</div>
 
 <!-- MODAL GASTO -->
 <div class="modal-overlay" id="modal-gasto" onclick="if(event.target===this)cerrarModal('gasto')">
@@ -838,14 +948,6 @@
       <div class="field-wrap"><div class="field-label">Fecha inicio</div><input type="date" class="input" id="vj-inicio"></div>
       <div class="field-wrap"><div class="field-label">Fecha fin</div><input type="date" class="input" id="vj-fin"></div>
     </div>
-    <div class="field-wrap">
-      <div class="field-label">Compañeros de viaje (para repartir gastos)</div>
-      <div id="vj-companeros-lista" style="display:flex;flex-direction:column;gap:6px;margin-bottom:8px"></div>
-      <div style="display:flex;gap:6px">
-        <input type="text" class="input" id="vj-companero-nuevo" placeholder="Nombre" style="flex:1" onkeydown="if(event.key==='Enter'){event.preventDefault();agregarCompanero();}">
-        <button type="button" class="btn-ghost" style="width:auto;padding:0 16px;margin-bottom:0" onclick="agregarCompanero()">+</button>
-      </div>
-    </div>
     <button class="btn-primary" onclick="guardarViaje()">Guardar viaje</button>
     <button class="btn-danger" id="btn-borrar-viaje" onclick="borrarViaje()" style="display:none">🗑 Borrar viaje</button>
     <button class="btn-ghost" onclick="cancelarModalViaje()">Cancelar</button>
@@ -867,36 +969,9 @@
       <select class="input moneda-select" id="vi-moneda" onchange="setMonedaViajeItem(this.value)"></select>
     </div>
     <div class="field-wrap"><div class="field-label">Monto</div><input type="number" class="input" id="vi-monto" placeholder="0" step="0.01"></div>
-    <div class="field-wrap" id="vi-reparto-wrap" style="display:none">
-      <div class="field-label">Pagado por</div>
-      <select class="input" id="vi-pagador" style="margin-bottom:10px"></select>
-      <div class="field-label">Se reparte entre</div>
-      <div class="pill-sel" id="vi-participantes-pills"></div>
-    </div>
     <button class="btn-primary" onclick="guardarViajeItem()">Agregar gasto</button>
     <button class="btn-danger" id="btn-borrar-viaje-item" onclick="borrarViajeItem()" style="display:none">🗑 Borrar gasto</button>
     <button class="btn-ghost" onclick="volverAViajeDetalle()">Cancelar</button>
-  </div>
-</div>
-
-<!-- MODAL PAGO/APORTE DE VIAJE -->
-<div class="modal-overlay" id="modal-viaje-pago" onclick="if(event.target===this)cerrarModal('viaje-pago')">
-  <div class="modal">
-    <div class="modal-title">💵 Registrar pago</div>
-    <input type="hidden" id="vp-viaje-id">
-    <input type="hidden" id="vp-pago-id">
-    <div class="field-wrap"><div class="field-label">Compañero</div><select class="input" id="vp-companero"></select></div>
-    <div class="field-wrap">
-      <div class="field-label">Medio de pago</div>
-      <div class="pill-sel" id="vp-medio-pills"></div>
-    </div>
-    <div class="field-wrap"><div class="field-label">Moneda</div><select class="input moneda-select" id="vp-moneda" onchange="setMonedaPagoViaje(this.value)"></select></div>
-    <div class="field-wrap"><div class="field-label">Monto</div><input type="number" class="input" id="vp-monto" placeholder="0" step="0.01"></div>
-    <div class="field-wrap"><div class="field-label">Fecha</div><input type="date" class="input" id="vp-fecha"></div>
-    <div class="field-wrap"><div class="field-label">Nota (opcional)</div><input type="text" class="input" id="vp-nota" placeholder="Ej: A Carlos"></div>
-    <button class="btn-primary" onclick="guardarPagoViaje()">Guardar pago</button>
-    <button class="btn-danger" id="btn-borrar-pago-viaje" onclick="borrarPagoViaje()" style="display:none">🗑 Borrar pago</button>
-    <button class="btn-ghost" onclick="volverAViajeDetalleDesdePago()">Cancelar</button>
   </div>
 </div>
 
@@ -905,7 +980,7 @@
   <div class="modal" style="max-height:92dvh">
     <div class="modal-title" id="vd-titulo">Viaje</div>
     <div id="vd-resumen" style="margin-bottom:10px"></div>
-    <button class="btn-ghost" style="margin-bottom:14px" onclick="editarViajeDesdeDetalle()">✏️ Editar destino / fechas / compañeros</button>
+    <button class="btn-ghost" style="margin-bottom:14px" onclick="editarViajeDesdeDetalle()">✏️ Editar destino / fechas</button>
 
     <div class="section-title" style="margin-top:4px">🎯 Meta de ahorro</div>
     <div id="vd-meta" style="margin-bottom:10px"></div>
@@ -983,9 +1058,6 @@
       <button type="button" class="btn-ghost" style="margin-bottom:0;font-size:12px" onclick="abrirModalItinerarioItem(document.getElementById('vd-titulo').dataset.viajeId,null,'actividad')">🎫 + Activ.</button>
     </div>
 
-    <div class="section-title" style="margin-top:14px">💰 Reparto de gastos entre compañeros</div>
-    <div id="vd-balance"></div>
-    <button type="button" class="btn-ghost" id="vd-btn-enviar-reporte" style="display:none;margin-bottom:14px" onclick="enviarReporteViaje(document.getElementById('vd-titulo').dataset.viajeId)">📤 Enviar reporte de gastos</button>
     <div class="section-title" style="margin-top:14px">Gastos del viaje</div>
     <div id="vd-items"></div>
     <button class="btn-primary" onclick="abrirModalViajeItem(document.getElementById('vd-titulo').dataset.viajeId)">+ Agregar gasto</button>
@@ -1152,7 +1224,7 @@ function _dbVacia(){
   return {
     perfil:{nombre:'',email:'',tipoCambio:null},
     gastos:[], ingresos:[], cuentas:[], tarjetas:[], prestamos:[], compromisos:[],
-    inversiones:[], proyectos:[], viajes:[], presupuestos:[],
+    inversiones:[], proyectos:[], viajes:[], presupuestos:[], gastosGrupales:[],
     mercado:null, historialPatrimonio:[], ultimoSnapshotPatrimonio:null,
     ultimoBackup:null,
   };
@@ -1710,6 +1782,7 @@ function navGo(page,btn){
   if(page==='inversiones'){ renderInversiones(); document.getElementById('fab-inversiones').style.display=''; }
   if(page==='proyectos'){ renderProyectos(); document.getElementById('fab-proyectos').style.display=''; }
   if(page==='compromisos'){ renderCompromisos(); document.getElementById('fab-compromisos').style.display=''; }
+  if(page==='gastosgrupales'){ renderGastosGrupales(); document.getElementById('fab-gastosgrupales').style.display=''; }
   window.scrollTo(0,0);
   if(!_poppingState&&page!=='home') history.pushState({page},'','');
 }
@@ -3017,6 +3090,434 @@ async function toggleCompradoItem(proyectoId,itemId){
 // ═══════════════════════════════════════════════════════════════
 // VIAJES
 // ═══════════════════════════════════════════════════════════════
+// ═══════════════════════════════════════════════════════════════
+// GASTOS GRUPALES — repartir gastos de un evento (cena, asado, salida) entre varios
+// ═══════════════════════════════════════════════════════════════
+const CATEGORIAS_GRUPO=[
+  {id:'comida',label:'🍖 Comida'},
+  {id:'bebida',label:'🥤 Bebida'},
+  {id:'transporte',label:'🚗 Transporte'},
+  {id:'entradas',label:'🎫 Entradas/Actividad'},
+  {id:'alojamiento',label:'🏨 Alojamiento'},
+  {id:'otro',label:'📦 Otro'},
+];
+function catGrupoLabel(id){ return (CATEGORIAS_GRUPO.find(c=>c.id===id)||CATEGORIAS_GRUPO[5]).label; }
+function nombreParticipanteGrupo(grupo,id){ const p=(grupo.participantes||[]).find(x=>x.id===id); return p?p.nombre:'?'; }
+
+function renderGastosGrupales(){
+  const el=document.getElementById('gastosgrupales-lista');
+  const grupos=[...(DB.gastosGrupales||[])].sort((a,b)=>(b.fecha||'').localeCompare(a.fecha||''));
+  el.innerHTML=grupos.length?grupos.map(g=>{
+    const totales={};
+    (g.gastos||[]).forEach(x=>{ totales[x.moneda]=(totales[x.moneda]||0)+(x.monto||0); });
+    const totalesStr=Object.entries(totales).map(([m,val])=>fmtMoney(val,m)).join(' + ')||'Sin gastos';
+    return '<div class="card" onclick="abrirGrupoDetalle(\''+g.id+'\')" style="cursor:pointer">'+
+      '<div style="font-weight:700;font-size:16px">🧾 '+esc(g.nombre)+'</div>'+
+      '<div style="font-size:12px;color:var(--text3);margin-top:2px">'+fmtFecha(g.fecha)+'</div>'+
+      '<div style="font-size:13px;color:var(--accent);font-weight:700;margin-top:8px">'+totalesStr+'</div>'+
+      ((g.participantes||[]).length?'<div style="font-size:11px;color:var(--text3);margin-top:4px">👥 '+g.participantes.map(p=>esc(p.nombre)).join(', ')+'</div>':'')+
+    '</div>';
+  }).join(''):'<div class="empty"><div class="empty-icon">🧾</div><div class="empty-text">Sin eventos</div><div class="empty-sub">Tocá + para cargar una cena, asado o salida</div></div>';
+}
+
+let _grupoOrigenDetalle=null;
+function abrirModalGrupo(id){
+  const g=id?DB.gastosGrupales.find(x=>x.id===id):null;
+  document.getElementById('gg-id').value=g?g.id:'';
+  document.getElementById('gg-nombre').value=g?g.nombre:'';
+  document.getElementById('gg-fecha').value=g?(g.fecha||''):fechaHoy();
+  document.getElementById('modal-grupo-title').textContent=g?'Editar evento':'Nuevo evento';
+  document.getElementById('btn-borrar-grupo').style.display=g?'':'none';
+  _grupoOrigenDetalle=null;
+  abrirModal('grupo');
+}
+function editarGrupoDesdeDetalle(){
+  const id=document.getElementById('gd-titulo').dataset.grupoId;
+  const g=DB.gastosGrupales.find(x=>x.id===id);
+  if(!g) return;
+  document.getElementById('gg-id').value=g.id;
+  document.getElementById('gg-nombre').value=g.nombre;
+  document.getElementById('gg-fecha').value=g.fecha||'';
+  document.getElementById('modal-grupo-title').textContent='Editar evento';
+  document.getElementById('btn-borrar-grupo').style.display='';
+  _grupoOrigenDetalle=id;
+  cambiarModal('grupo-detalle','grupo');
+}
+function cancelarModalGrupo(){
+  if(_grupoOrigenDetalle){ const id=_grupoOrigenDetalle; _grupoOrigenDetalle=null; _renderGrupoDetalleContenido(id); cambiarModal('grupo','grupo-detalle'); }
+  else cerrarModal('grupo');
+}
+async function guardarGrupo(){
+  const nombre=document.getElementById('gg-nombre').value.trim();
+  if(!nombre){ toast('⚠️ Ingresá un nombre'); return; }
+  const id=document.getElementById('gg-id').value;
+  const existente=id?DB.gastosGrupales.find(g=>g.id===id):null;
+  const data={
+    id:id||uid(), nombre,
+    fecha:document.getElementById('gg-fecha').value||fechaHoy(),
+    participantes: existente?existente.participantes:[],
+    gastos: existente?existente.gastos:[],
+    pagos: existente?existente.pagos:[],
+  };
+  if(!DB.gastosGrupales) DB.gastosGrupales=[];
+  if(id){ const idx=DB.gastosGrupales.findIndex(g=>g.id===id); if(idx>=0) DB.gastosGrupales[idx]=data; }
+  else DB.gastosGrupales.push(data);
+  await save(); renderGastosGrupales();
+  if(_grupoOrigenDetalle){ const oid=_grupoOrigenDetalle; _grupoOrigenDetalle=null; _renderGrupoDetalleContenido(oid); cambiarModal('grupo','grupo-detalle'); }
+  else cerrarModal('grupo');
+  toast('✅ Guardado');
+}
+async function borrarGrupo(){
+  const id=document.getElementById('gg-id').value;
+  if(!id||!confirm('¿Borrar este evento y todos sus gastos?')) return;
+  DB.gastosGrupales=DB.gastosGrupales.filter(g=>g.id!==id);
+  _grupoOrigenDetalle=null;
+  await save(); cerrarModal('grupo'); cerrarModal('grupo-detalle'); renderGastosGrupales();
+  toast('🗑 Evento eliminado');
+}
+
+function computeGrupoBalancePorMoneda(grupo,moneda){
+  const participantes=grupo.participantes||[];
+  const aportado={}, deberia={};
+  participantes.forEach(p=>{ aportado[p.id]=0; deberia[p.id]=0; });
+  (grupo.gastos||[]).filter(g=>g.moneda===moneda&&g.pagadoPorId&&(g.participantesIds||[]).length).forEach(g=>{
+    const cuota=g.monto/g.participantesIds.length;
+    g.participantesIds.forEach(pid=>{ if(deberia[pid]!==undefined) deberia[pid]+=cuota; });
+    if(aportado[g.pagadoPorId]!==undefined) aportado[g.pagadoPorId]+=g.monto;
+  });
+  (grupo.pagos||[]).filter(p=>p.moneda===moneda&&aportado[p.participanteId]!==undefined).forEach(p=>{
+    aportado[p.participanteId]+=p.monto;
+  });
+  const saldo={};
+  participantes.forEach(p=>{ saldo[p.id]=(aportado[p.id]||0)-(deberia[p.id]||0); });
+  return {aportado,deberia,saldo};
+}
+
+async function enviarReporteGrupo(grupoId){
+  const g=DB.gastosGrupales.find(x=>x.id===grupoId);
+  if(!g) return;
+  let texto='🧾 '+g.nombre+'\n'+fmtFecha(g.fecha)+'\n';
+  let huboDatos=false;
+  MONEDAS.map(m=>m.code).forEach(mon=>{
+    const gastosEnMoneda=(g.gastos||[]).filter(x=>x.moneda===mon);
+    if(!gastosEnMoneda.length||!(g.participantes||[]).length) return;
+    huboDatos=true;
+    const {aportado,deberia,saldo}=computeGrupoBalancePorMoneda(g,mon);
+    const totalMoneda=gastosEnMoneda.reduce((s,x)=>s+(x.monto||0),0);
+    texto+='\n💰 Total en '+mon+': '+fmtMoney(totalMoneda,mon)+' entre '+g.participantes.length+' personas ('+fmtMoney(totalMoneda/g.participantes.length,mon)+' c/u)\n';
+    texto+='\nCompras:\n';
+    gastosEnMoneda.forEach(x=>{
+      texto+='• '+x.concepto+': '+fmtMoney(x.monto,mon)+(x.pagadoPorId?' (pagó '+nombreParticipanteGrupo(g,x.pagadoPorId)+')':'')+'\n';
+    });
+    texto+='\nEstado por persona:\n';
+    g.participantes.forEach(p=>{
+      const s=saldo[p.id]||0;
+      texto+=(s>=-0.5?'✅ ':'⬜ ')+p.nombre+': aportó '+fmtMoney(aportado[p.id]||0,mon)+' · le correspondía '+fmtMoney(deberia[p.id]||0,mon)+' · saldo '+fmtMoney(s,mon)+'\n';
+      (g.pagos||[]).filter(x=>x.moneda===mon&&x.participanteId===p.id).forEach(x=>{
+        texto+='   '+fmtFecha(x.fecha)+' · '+(x.medio==='efectivo'?'Efectivo':'Transferencia')+' · '+fmtMoney(x.monto,mon)+(x.nota?' · '+x.nota:'')+'\n';
+      });
+    });
+    const pagosSug=computeSugerenciasPago(saldo);
+    if(pagosSug.length){
+      texto+='\nPara saldar:\n';
+      pagosSug.forEach(p=>{ texto+=nombreParticipanteGrupo(g,p.de)+' le paga a '+nombreParticipanteGrupo(g,p.a)+': '+fmtMoney(p.monto,mon)+'\n'; });
+    }
+  });
+  if(!huboDatos){ toast('⚠️ Todavía no hay gastos repartidos para reportar'); return; }
+  texto+='\nGenerado con Frigurso Finanzas';
+  if(navigator.share){
+    try{ await navigator.share({title:g.nombre,text:texto}); return; }
+    catch(e){ if(e.name==='AbortError') return; }
+  }
+  if(navigator.clipboard&&navigator.clipboard.writeText){
+    navigator.clipboard.writeText(texto)
+      .then(()=>toast('✅ Reporte copiado — pegalo en WhatsApp o donde quieras'))
+      .catch(()=>toast('⚠️ No se pudo copiar el reporte'));
+  } else {
+    toast('⚠️ Tu navegador no soporta compartir ni copiar');
+  }
+}
+
+function abrirGrupoDetalle(id){
+  if(!_renderGrupoDetalleContenido(id)) return;
+  abrirModal('grupo-detalle');
+}
+function _renderGrupoDetalleContenido(id){
+  const g=DB.gastosGrupales.find(x=>x.id===id);
+  if(!g) return false;
+  document.getElementById('gd-titulo').textContent='🧾 '+g.nombre;
+  document.getElementById('gd-titulo').dataset.grupoId=id;
+
+  const totalPorMoneda={};
+  (g.gastos||[]).forEach(x=>{ totalPorMoneda[x.moneda]=(totalPorMoneda[x.moneda]||0)+(x.monto||0); });
+  document.getElementById('gd-resumen').innerHTML='<div class="card">'+
+    '<div style="font-size:12px;color:var(--text3)">'+fmtFecha(g.fecha)+'</div>'+
+    '<div style="margin-top:8px;display:flex;gap:18px;flex-wrap:wrap">'+
+    (Object.keys(totalPorMoneda).length?Object.entries(totalPorMoneda).map(([mon,val])=>
+      '<div><div style="font-size:19px;font-weight:900;font-family:var(--mono)">'+fmtMoney(val,mon)+'</div><div style="font-size:10px;color:var(--text3)">gastado en '+mon+'</div></div>'
+    ).join(''):'<div style="font-size:12px;color:var(--text3)">Sin gastos cargados</div>')+
+    '</div></div>';
+
+  const parts=g.participantes||[];
+  document.getElementById('gd-participantes').innerHTML=parts.length?parts.map(p=>
+    '<div style="display:flex;align-items:center;gap:8px;background:var(--bg3);border-radius:10px;padding:8px 12px;cursor:pointer" onclick="abrirModalParticipanteGrupo(\''+id+'\',\''+p.id+'\')"><span style="flex:1;font-size:13px">'+esc(p.nombre)+'</span><span style="color:var(--text3);font-size:12px">✏️</span></div>'
+  ).join(''):'<div style="font-size:12px;color:var(--text3);padding:6px 0">Sin participantes todavía — tocá ＋ para agregar</div>';
+
+  let balanceHtml='', huboBalance=false;
+  MONEDAS.map(m=>m.code).forEach(mon=>{
+    const gastosEnMoneda=(g.gastos||[]).filter(x=>x.moneda===mon);
+    if(!gastosEnMoneda.length||!parts.length) return;
+    const {saldo}=computeGrupoBalancePorMoneda(g,mon);
+    huboBalance=true;
+    const pagosMon=(g.pagos||[]).filter(p=>p.moneda===mon);
+    balanceHtml+='<div class="section-title" style="margin-top:12px">Balance '+mon+'</div><div class="card">'+
+      parts.map(part=>{
+        const s=saldo[part.id]||0;
+        const pagado=s>=-0.5;
+        const col=s>0.01?'var(--green)':s<-0.01?'var(--red)':'var(--text3)';
+        const pagosP=pagosMon.filter(p=>p.participanteId===part.id);
+        return '<div style="padding:6px 0;border-bottom:1px solid var(--border)">'+
+          '<div style="display:flex;justify-content:space-between;align-items:center">'+
+            '<span style="font-size:13px">'+(pagado?'✅':'⬜')+' '+esc(part.nombre)+'</span>'+
+            '<span style="font-family:var(--mono);font-weight:800;color:'+col+'">'+fmtMoney(s,mon)+'</span>'+
+          '</div>'+
+          (pagosP.length?pagosP.map(p=>
+            '<div style="display:flex;justify-content:space-between;font-size:11px;color:var(--text3);padding:2px 0 2px 18px" onclick="abrirModalPagoGrupo(\''+id+'\',\''+part.id+'\',\''+mon+'\',\''+p.id+'\')">'+
+              '<span>'+fmtFecha(p.fecha)+' · '+(p.medio==='efectivo'?'💵 Efectivo':'🏦 Transferencia')+(p.nota?' · '+esc(p.nota):'')+'</span>'+
+              '<span style="font-family:var(--mono)">'+fmtMoney(p.monto,mon)+'</span>'+
+            '</div>'
+          ).join(''):'')+
+          '<button type="button" class="btn-ghost" style="margin:4px 0 0 18px;padding:2px 10px;font-size:11px;width:auto;min-height:auto" onclick="abrirModalPagoGrupo(\''+id+'\',\''+part.id+'\',\''+mon+'\')">+ Registrar pago</button>'+
+        '</div>';
+      }).join('')+
+    '</div>';
+    const pagosSug=computeSugerenciasPago(saldo);
+    if(pagosSug.length){
+      balanceHtml+='<div class="card" style="margin-top:6px">'+
+        pagosSug.map(p=>'<div style="display:flex;justify-content:space-between;font-size:12px;padding:3px 0"><span><b>'+esc(nombreParticipanteGrupo(g,p.de))+'</b> le paga a <b>'+esc(nombreParticipanteGrupo(g,p.a))+'</b></span><span style="font-family:var(--mono);font-weight:700;color:var(--gold)">'+fmtMoney(p.monto,mon)+'</span></div>').join('')+
+      '</div>';
+    }
+  });
+  if(!huboBalance){
+    balanceHtml='<div class="card"><div style="font-size:12px;color:var(--text3)">'+
+      (parts.length?'Todavía no cargaste gastos con "pagó" asignado — al agregarlos vas a ver acá cuánto aportó cada uno y quién le debe a quién.':'Agregá participantes para poder repartir los gastos entre todos.')+
+    '</div></div>';
+  }
+  document.getElementById('gd-balance').innerHTML=balanceHtml;
+  document.getElementById('gd-btn-enviar-reporte').style.display=huboBalance?'':'none';
+
+  const gastos=[...(g.gastos||[])];
+  document.getElementById('gd-gastos').innerHTML=gastos.length?gastos.map(x=>
+    '<div class="row-item" onclick="abrirModalGastoGrupo(\''+id+'\',\''+x.id+'\')">'+
+      '<div class="row-icon" style="background:rgba(91,107,245,.15)">'+catGrupoLabel(x.categoria).split(' ')[0]+'</div>'+
+      '<div class="row-main"><div class="row-title">'+esc(x.concepto)+'</div>'+
+      '<div class="row-sub">'+catGrupoLabel(x.categoria).split(' ').slice(1).join(' ')+(x.pagadoPorId?' · Pagó '+esc(nombreParticipanteGrupo(g,x.pagadoPorId)):'')+'</div></div>'+
+      '<div class="row-amt"><div class="row-amt-val">'+fmtMoney(x.monto,x.moneda)+'</div></div>'+
+    '</div>'
+  ).join(''):'<div style="text-align:center;color:var(--text3);font-size:12px;padding:16px 0">Sin gastos cargados todavía</div>';
+
+  return true;
+}
+
+// ── Participantes de un evento (ID fijo, nombre editable sin romper el historial) ──
+function abrirModalParticipanteGrupo(grupoId,participanteId){
+  const g=DB.gastosGrupales.find(x=>x.id===grupoId);
+  if(!g) return;
+  document.getElementById('gp-grupo-id').value=grupoId;
+  document.getElementById('gp-participante-id').value=participanteId||'';
+  const p=participanteId?(g.participantes||[]).find(x=>x.id===participanteId):null;
+  document.getElementById('gp-nombre').value=p?p.nombre:'';
+  document.getElementById('modal-grupo-participante-title').textContent=p?'Editar participante':'+ Participante';
+  document.getElementById('btn-borrar-participante-grupo').style.display=p?'':'none';
+  cambiarModal('grupo-detalle','grupo-participante');
+}
+async function guardarParticipanteGrupo(){
+  const grupoId=document.getElementById('gp-grupo-id').value;
+  const g=DB.gastosGrupales.find(x=>x.id===grupoId);
+  if(!g) return;
+  const nombre=document.getElementById('gp-nombre').value.trim();
+  if(!nombre){ toast('⚠️ Ingresá un nombre'); return; }
+  const participanteId=document.getElementById('gp-participante-id').value;
+  if(!g.participantes) g.participantes=[];
+  if(participanteId){
+    const idx=g.participantes.findIndex(p=>p.id===participanteId);
+    if(idx>=0) g.participantes[idx].nombre=nombre;
+  } else {
+    g.participantes.push({id:uid(),nombre});
+  }
+  await save(); renderGastosGrupales();
+  _renderGrupoDetalleContenido(grupoId);
+  cambiarModal('grupo-participante','grupo-detalle');
+  toast('✅ Guardado');
+}
+async function borrarParticipanteGrupo(){
+  const grupoId=document.getElementById('gp-grupo-id').value;
+  const participanteId=document.getElementById('gp-participante-id').value;
+  const g=DB.gastosGrupales.find(x=>x.id===grupoId);
+  if(!g||!participanteId) return;
+  const tieneDatos=(g.gastos||[]).some(x=>x.pagadoPorId===participanteId||(x.participantesIds||[]).includes(participanteId))
+    ||(g.pagos||[]).some(x=>x.participanteId===participanteId);
+  if(tieneDatos){ toast('⚠️ Tiene gastos o pagos cargados — borralos primero para poder sacarlo'); return; }
+  if(!confirm('¿Sacar a este participante?')) return;
+  g.participantes=g.participantes.filter(p=>p.id!==participanteId);
+  await save(); renderGastosGrupales();
+  _renderGrupoDetalleContenido(grupoId);
+  cambiarModal('grupo-participante','grupo-detalle');
+  toast('🗑 Participante eliminado');
+}
+function volverAGrupoDetalleDesdeParticipante(){
+  const grupoId=document.getElementById('gp-grupo-id').value;
+  _renderGrupoDetalleContenido(grupoId);
+  cambiarModal('grupo-participante','grupo-detalle');
+}
+
+// ── Gastos (compras) de un evento ──
+let _catGastoGrupo='comida', _monedaGastoGrupo='ARS', _participantesGastoGrupo=[];
+function abrirModalGastoGrupo(grupoId,itemId){
+  const g=DB.gastosGrupales.find(x=>x.id===grupoId);
+  if(!g) return;
+  document.getElementById('gi-grupo-id').value=grupoId;
+  document.getElementById('gi-grupo-id').dataset.itemId=itemId||'';
+  const it=itemId?(g.gastos||[]).find(x=>x.id===itemId):null;
+  document.getElementById('gi-concepto').value=it?it.concepto:'';
+  document.getElementById('gi-monto').value=it?it.monto:'';
+  document.getElementById('modal-grupo-gasto-title').textContent=it?'Editar gasto':'+ Gasto';
+  document.getElementById('btn-borrar-gasto-grupo').style.display=it?'':'none';
+  _monedaGastoGrupo=it?it.moneda:'ARS';
+  setMonedaGastoGrupo(_monedaGastoGrupo);
+  _catGastoGrupo=it?(it.categoria||'comida'):'comida';
+  renderCatGrupoPills();
+  const sel=document.getElementById('gi-pagador');
+  sel.innerHTML='<option value="">— Elegí —</option>'+(g.participantes||[]).map(p=>'<option value="'+p.id+'" '+(it&&it.pagadoPorId===p.id?'selected':'')+'>'+esc(p.nombre)+'</option>').join('');
+  _participantesGastoGrupo=it?[...(it.participantesIds||[])]:(g.participantes||[]).map(p=>p.id);
+  renderParticipantesGastoGrupoPills(g.participantes||[]);
+  cambiarModal('grupo-detalle','grupo-gasto');
+}
+function renderCatGrupoPills(){
+  document.getElementById('gi-cat-pills').innerHTML=CATEGORIAS_GRUPO.map(c=>
+    '<button type="button" class="pill '+(c.id===_catGastoGrupo?'sel':'')+'" onclick="_catGastoGrupo=\''+c.id+'\';renderCatGrupoPills()">'+c.label+'</button>'
+  ).join('');
+}
+function setMonedaGastoGrupo(m){ _monedaGastoGrupo=m; document.getElementById('gi-moneda').value=m; }
+function renderParticipantesGastoGrupoPills(participantes){
+  document.getElementById('gi-participantes-pills').innerHTML=participantes.map(p=>{
+    const sel=_participantesGastoGrupo.includes(p.id);
+    return '<button type="button" class="pill '+(sel?'sel':'')+'" onclick="toggleParticipanteGastoGrupo(\''+p.id+'\')">'+esc(p.nombre)+'</button>';
+  }).join('');
+}
+function toggleParticipanteGastoGrupo(pid){
+  if(_participantesGastoGrupo.includes(pid)) _participantesGastoGrupo=_participantesGastoGrupo.filter(x=>x!==pid);
+  else _participantesGastoGrupo.push(pid);
+  const g=DB.gastosGrupales.find(x=>x.id===document.getElementById('gi-grupo-id').value);
+  renderParticipantesGastoGrupoPills(g.participantes||[]);
+}
+async function guardarGastoGrupo(){
+  const grupoId=document.getElementById('gi-grupo-id').value;
+  const g=DB.gastosGrupales.find(x=>x.id===grupoId);
+  if(!g) return;
+  const concepto=document.getElementById('gi-concepto').value.trim();
+  const monto=parseFloat(document.getElementById('gi-monto').value)||0;
+  if(!concepto||monto<=0){ toast('⚠️ Completá qué se compró y el monto'); return; }
+  const itemId=document.getElementById('gi-grupo-id').dataset.itemId;
+  const pagadorId=document.getElementById('gi-pagador').value||null;
+  const data={
+    id:itemId||uid(), concepto, categoria:_catGastoGrupo, moneda:_monedaGastoGrupo, monto,
+    pagadoPorId:pagadorId||undefined,
+    participantesIds:pagadorId?[..._participantesGastoGrupo]:[],
+  };
+  if(!data.pagadoPorId) delete data.pagadoPorId;
+  if(!g.gastos) g.gastos=[];
+  if(itemId){ const idx=g.gastos.findIndex(x=>x.id===itemId); if(idx>=0) g.gastos[idx]=data; }
+  else g.gastos.push(data);
+  await save(); renderGastosGrupales();
+  _renderGrupoDetalleContenido(grupoId);
+  cambiarModal('grupo-gasto','grupo-detalle');
+  toast('✅ Gasto agregado');
+}
+async function borrarGastoGrupo(){
+  const grupoId=document.getElementById('gi-grupo-id').value;
+  const itemId=document.getElementById('gi-grupo-id').dataset.itemId;
+  const g=DB.gastosGrupales.find(x=>x.id===grupoId);
+  if(!g||!itemId||!confirm('¿Borrar este gasto?')) return;
+  g.gastos=(g.gastos||[]).filter(x=>x.id!==itemId);
+  await save(); renderGastosGrupales();
+  _renderGrupoDetalleContenido(grupoId);
+  cambiarModal('grupo-gasto','grupo-detalle');
+  toast('🗑 Gasto eliminado');
+}
+function volverAGrupoDetalleDesdeGasto(){
+  const grupoId=document.getElementById('gi-grupo-id').value;
+  _renderGrupoDetalleContenido(grupoId);
+  cambiarModal('grupo-gasto','grupo-detalle');
+}
+
+// ── Pagos / aportes al reparto de gastos del evento ──
+const MEDIOS_PAGO_GRUPO=[{id:'transferencia',label:'🏦 Transferencia'},{id:'efectivo',label:'💵 Efectivo'}];
+let _medioPagoGrupo='transferencia', _monedaPagoGrupo='ARS';
+function renderMedioPagoGrupoPills(){
+  document.getElementById('gpg-medio-pills').innerHTML=MEDIOS_PAGO_GRUPO.map(m=>
+    '<button type="button" class="pill '+(m.id===_medioPagoGrupo?'sel':'')+'" onclick="_medioPagoGrupo=\''+m.id+'\';renderMedioPagoGrupoPills()">'+m.label+'</button>'
+  ).join('');
+}
+function setMonedaPagoGrupo(m){ _monedaPagoGrupo=m; document.getElementById('gpg-moneda').value=m; }
+function abrirModalPagoGrupo(grupoId,participantePreId,monedaPre,pagoId){
+  const g=DB.gastosGrupales.find(x=>x.id===grupoId);
+  if(!g) return;
+  document.getElementById('gpg-grupo-id').value=grupoId;
+  document.getElementById('gpg-pago-id').value=pagoId||'';
+  const p=pagoId?(g.pagos||[]).find(x=>x.id===pagoId):null;
+  const sel=document.getElementById('gpg-participante');
+  sel.innerHTML=(g.participantes||[]).map(part=>'<option value="'+part.id+'">'+esc(part.nombre)+'</option>').join('');
+  sel.value=p?p.participanteId:(participantePreId||'');
+  _medioPagoGrupo=p?p.medio:'transferencia';
+  renderMedioPagoGrupoPills();
+  _monedaPagoGrupo=p?p.moneda:(monedaPre||'ARS');
+  setMonedaPagoGrupo(_monedaPagoGrupo);
+  document.getElementById('gpg-monto').value=p?p.monto:'';
+  document.getElementById('gpg-fecha').value=p?p.fecha:fechaHoy();
+  document.getElementById('gpg-nota').value=p?(p.nota||''):'';
+  document.getElementById('btn-borrar-pago-grupo').style.display=p?'':'none';
+  cambiarModal('grupo-detalle','grupo-pago');
+}
+async function guardarPagoGrupo(){
+  const grupoId=document.getElementById('gpg-grupo-id').value;
+  const g=DB.gastosGrupales.find(x=>x.id===grupoId);
+  if(!g) return;
+  const monto=parseFloat(document.getElementById('gpg-monto').value)||0;
+  if(monto<=0){ toast('⚠️ Ingresá el monto'); return; }
+  const participanteId=document.getElementById('gpg-participante').value;
+  if(!participanteId){ toast('⚠️ Elegí quién pagó'); return; }
+  const pagoId=document.getElementById('gpg-pago-id').value;
+  const data={
+    id:pagoId||uid(), participanteId, medio:_medioPagoGrupo, moneda:_monedaPagoGrupo, monto,
+    fecha:document.getElementById('gpg-fecha').value||fechaHoy(),
+    nota:document.getElementById('gpg-nota').value.trim(),
+  };
+  if(!g.pagos) g.pagos=[];
+  if(pagoId){ const idx=g.pagos.findIndex(x=>x.id===pagoId); if(idx>=0) g.pagos[idx]=data; }
+  else g.pagos.push(data);
+  await save(); renderGastosGrupales();
+  _renderGrupoDetalleContenido(grupoId);
+  cambiarModal('grupo-pago','grupo-detalle');
+  toast('✅ Pago registrado');
+}
+async function borrarPagoGrupo(){
+  const grupoId=document.getElementById('gpg-grupo-id').value;
+  const pagoId=document.getElementById('gpg-pago-id').value;
+  const g=DB.gastosGrupales.find(x=>x.id===grupoId);
+  if(!g||!pagoId||!confirm('¿Borrar este pago?')) return;
+  g.pagos=(g.pagos||[]).filter(x=>x.id!==pagoId);
+  await save(); renderGastosGrupales();
+  _renderGrupoDetalleContenido(grupoId);
+  cambiarModal('grupo-pago','grupo-detalle');
+  toast('🗑 Pago eliminado');
+}
+function volverAGrupoDetalleDesdePago(){
+  const grupoId=document.getElementById('gpg-grupo-id').value;
+  _renderGrupoDetalleContenido(grupoId);
+  cambiarModal('grupo-pago','grupo-detalle');
+}
+
 function renderViajes(){
   const el=document.getElementById('viajes-lista');
   const viajes=[...(DB.viajes||[])].sort((a,b)=>(b.inicio||'').localeCompare(a.inicio||''));
@@ -3028,11 +3529,9 @@ function renderViajes(){
       '<div style="font-weight:700;font-size:16px">✈️ '+esc(v.destino)+'</div>'+
       '<div style="font-size:12px;color:var(--text3);margin-top:2px">'+fmtFecha(v.inicio)+' → '+fmtFecha(v.fin)+'</div>'+
       '<div style="font-size:13px;color:var(--accent);font-weight:700;margin-top:8px">'+totalesStr+'</div>'+
-      (v.companeros&&v.companeros.length?'<div style="font-size:11px;color:var(--text3);margin-top:4px">👥 '+v.companeros.map(esc).join(', ')+'</div>':'')+
     '</div>';
   }).join(''):'<div class="empty"><div class="empty-icon">✈️</div><div class="empty-text">Sin viajes</div><div class="empty-sub">Tocá + para planear uno</div></div>';
 }
-let _companerosViaje=[];
 let _viajeOrigenDetalle=null;
 function abrirModalViaje(id){
   const v=id?DB.viajes.find(x=>x.id===id):null;
@@ -3042,9 +3541,6 @@ function abrirModalViaje(id){
   document.getElementById('vj-fin').value=v?(v.fin||''):'';
   document.getElementById('modal-viaje-title').textContent=v?'Editar viaje':'Nuevo viaje';
   document.getElementById('btn-borrar-viaje').style.display=v?'':'none';
-  _companerosViaje=v?[...(v.companeros||[])]:[];
-  document.getElementById('vj-companero-nuevo').value='';
-  renderCompanerosLista();
   _viajeOrigenDetalle=null;
   abrirModal('viaje');
 }
@@ -3058,28 +3554,12 @@ function editarViajeDesdeDetalle(){
   document.getElementById('vj-fin').value=v.fin||'';
   document.getElementById('modal-viaje-title').textContent='Editar viaje';
   document.getElementById('btn-borrar-viaje').style.display='';
-  _companerosViaje=[...(v.companeros||[])];
-  document.getElementById('vj-companero-nuevo').value='';
-  renderCompanerosLista();
   _viajeOrigenDetalle=id;
   cambiarModal('viaje-detalle','viaje');
 }
 function cancelarModalViaje(){
   if(_viajeOrigenDetalle){ const id=_viajeOrigenDetalle; _viajeOrigenDetalle=null; _renderViajeDetalleContenido(id); cambiarModal('viaje','viaje-detalle'); }
   else cerrarModal('viaje');
-}
-function renderCompanerosLista(){
-  document.getElementById('vj-companeros-lista').innerHTML=_companerosViaje.length?_companerosViaje.map((c,i)=>
-    '<div style="display:flex;align-items:center;gap:8px;background:var(--bg3);border-radius:10px;padding:8px 12px"><span style="flex:1;font-size:13px">'+esc(c)+'</span><button type="button" onclick="_companerosViaje.splice('+i+',1);renderCompanerosLista()" style="color:var(--red);font-size:16px">✕</button></div>'
-  ).join(''):'<div style="font-size:11px;color:var(--text3)">Sin compañeros — si viajás con alguien, agregalo para repartir gastos</div>';
-}
-function agregarCompanero(){
-  const inp=document.getElementById('vj-companero-nuevo');
-  const nombre=inp.value.trim();
-  if(!nombre) return;
-  if(!_companerosViaje.includes(nombre)) _companerosViaje.push(nombre);
-  inp.value='';
-  renderCompanerosLista();
 }
 async function guardarViaje(){
   const destino=document.getElementById('vj-destino').value.trim();
@@ -3091,7 +3571,6 @@ async function guardarViaje(){
     id:id||uid(), destino,
     inicio:document.getElementById('vj-inicio').value||fechaHoy(),
     fin:document.getElementById('vj-fin').value||null,
-    companeros:[..._companerosViaje],
     items: existente?existente.items:[],
   };
   if(!DB.viajes) DB.viajes=[];
@@ -3109,68 +3588,6 @@ async function borrarViaje(){
   _viajeOrigenDetalle=null;
   await save(); cerrarModal('viaje'); cerrarModal('viaje-detalle'); renderViajes();
   toast('🗑 Viaje eliminado');
-}
-
-function computeViajeBalancePorMoneda(viaje,moneda){
-  const companeros=viaje.companeros||[];
-  const aportado={}, deberia={};
-  companeros.forEach(c=>{ aportado[c]=0; deberia[c]=0; });
-  (viaje.items||[]).filter(it=>it.moneda===moneda&&it.pagadoPor&&(it.participantes||[]).length).forEach(it=>{
-    const cuota=it.monto/it.participantes.length;
-    it.participantes.forEach(p=>{ if(deberia[p]!==undefined) deberia[p]+=cuota; });
-    if(aportado[it.pagadoPor]!==undefined) aportado[it.pagadoPor]+=it.monto;
-  });
-  (viaje.pagos||[]).filter(p=>p.moneda===moneda&&aportado[p.companero]!==undefined).forEach(p=>{
-    aportado[p.companero]+=p.monto;
-  });
-  const saldo={};
-  companeros.forEach(c=>{ saldo[c]=(aportado[c]||0)-(deberia[c]||0); });
-  return {aportado,deberia,saldo};
-}
-
-async function enviarReporteViaje(viajeId){
-  const v=DB.viajes.find(x=>x.id===viajeId);
-  if(!v) return;
-  let texto='✈️ Gastos del viaje a '+v.destino+'\n'+fmtFecha(v.inicio)+' → '+fmtFecha(v.fin)+'\n';
-  let huboDatos=false;
-  MONEDAS.map(m=>m.code).forEach(mon=>{
-    const itemsEnMoneda=(v.items||[]).filter(it=>it.moneda===mon);
-    if(!itemsEnMoneda.length||!(v.companeros||[]).length) return;
-    huboDatos=true;
-    const {aportado,deberia,saldo}=computeViajeBalancePorMoneda(v,mon);
-    const totalMoneda=itemsEnMoneda.reduce((s,it)=>s+(it.monto||0),0);
-    texto+='\n💰 Total en '+mon+': '+fmtMoney(totalMoneda,mon)+' entre '+v.companeros.length+' personas ('+fmtMoney(totalMoneda/v.companeros.length,mon)+' c/u)\n';
-    texto+='\nCompras:\n';
-    itemsEnMoneda.forEach(it=>{
-      texto+='• '+(it.nota||rubroLabel(it.rubro))+': '+fmtMoney(it.monto,mon)+(it.pagadoPor?' (pagó '+it.pagadoPor+')':'')+'\n';
-    });
-    texto+='\nEstado por persona:\n';
-    v.companeros.forEach(c=>{
-      const s=saldo[c]||0;
-      texto+=(s>=-0.5?'✅ ':'⬜ ')+c+': aportó '+fmtMoney(aportado[c]||0,mon)+' · le correspondía '+fmtMoney(deberia[c]||0,mon)+' · saldo '+fmtMoney(s,mon)+'\n';
-      (v.pagos||[]).filter(p=>p.moneda===mon&&p.companero===c).forEach(p=>{
-        texto+='   '+fmtFecha(p.fecha)+' · '+(p.medio==='efectivo'?'Efectivo':'Transferencia')+' · '+fmtMoney(p.monto,mon)+(p.nota?' · '+p.nota:'')+'\n';
-      });
-    });
-    const pagosSug=computeSugerenciasPago(saldo);
-    if(pagosSug.length){
-      texto+='\nPara saldar:\n';
-      pagosSug.forEach(p=>{ texto+=p.de+' le paga a '+p.a+': '+fmtMoney(p.monto,mon)+'\n'; });
-    }
-  });
-  if(!huboDatos){ toast('⚠️ Todavía no hay gastos repartidos para reportar'); return; }
-  texto+='\nGenerado con Frigurso Finanzas';
-  if(navigator.share){
-    try{ await navigator.share({title:'Gastos del viaje a '+v.destino,text:texto}); return; }
-    catch(e){ if(e.name==='AbortError') return; }
-  }
-  if(navigator.clipboard&&navigator.clipboard.writeText){
-    navigator.clipboard.writeText(texto)
-      .then(()=>toast('✅ Reporte copiado — pegalo en WhatsApp o donde quieras'))
-      .catch(()=>toast('⚠️ No se pudo copiar el reporte'));
-  } else {
-    toast('⚠️ Tu navegador no soporta compartir ni copiar');
-  }
 }
 
 function abrirViajeDetalle(id){
@@ -3245,55 +3662,11 @@ function _renderViajeDetalleContenido(id){
       }).join('');
   }).join(''):'<div style="text-align:center;color:var(--text3);font-size:12px;padding:10px 0">Sin itinerario cargado todavía</div>';
 
-  let balanceHtml='', huboBalance=false;
-  MONEDAS.map(m=>m.code).forEach(mon=>{
-    const itemsEnMoneda=(v.items||[]).filter(it=>it.moneda===mon);
-    if(!itemsEnMoneda.length||!(v.companeros||[]).length) return;
-    const {saldo}=computeViajeBalancePorMoneda(v,mon);
-    huboBalance=true;
-    const pagosMon=(v.pagos||[]).filter(p=>p.moneda===mon);
-    balanceHtml+='<div class="section-title" style="margin-top:12px">Balance '+mon+'</div><div class="card">'+
-      v.companeros.map(c=>{
-        const s=saldo[c]||0;
-        const pagado=s>=-0.5;
-        const col=s>0.01?'var(--green)':s<-0.01?'var(--red)':'var(--text3)';
-        const pagosC=pagosMon.filter(p=>p.companero===c);
-        return '<div style="padding:6px 0;border-bottom:1px solid var(--border)">'+
-          '<div style="display:flex;justify-content:space-between;align-items:center">'+
-            '<span style="font-size:13px">'+(pagado?'✅':'⬜')+' '+esc(c)+'</span>'+
-            '<span style="font-family:var(--mono);font-weight:800;color:'+col+'">'+fmtMoney(s,mon)+'</span>'+
-          '</div>'+
-          (pagosC.length?pagosC.map(p=>
-            '<div style="display:flex;justify-content:space-between;font-size:11px;color:var(--text3);padding:2px 0 2px 18px" onclick="abrirModalPagoViaje(\''+id+'\',\''+esc(c)+'\',\''+mon+'\',\''+p.id+'\')">'+
-              '<span>'+fmtFecha(p.fecha)+' · '+(p.medio==='efectivo'?'💵 Efectivo':'🏦 Transferencia')+(p.nota?' · '+esc(p.nota):'')+'</span>'+
-              '<span style="font-family:var(--mono)">'+fmtMoney(p.monto,mon)+'</span>'+
-            '</div>'
-          ).join(''):'')+
-          '<button type="button" class="btn-ghost" style="margin:4px 0 0 18px;padding:2px 10px;font-size:11px;width:auto;min-height:auto" onclick="abrirModalPagoViaje(\''+id+'\',\''+esc(c)+'\',\''+mon+'\')">+ Registrar pago</button>'+
-        '</div>';
-      }).join('')+
-    '</div>';
-    const pagosSug=computeSugerenciasPago(saldo);
-    if(pagosSug.length){
-      balanceHtml+='<div class="card" style="margin-top:6px">'+
-        pagosSug.map(p=>'<div style="display:flex;justify-content:space-between;font-size:12px;padding:3px 0"><span><b>'+esc(p.de)+'</b> le paga a <b>'+esc(p.a)+'</b></span><span style="font-family:var(--mono);font-weight:700;color:var(--gold)">'+fmtMoney(p.monto,mon)+'</span></div>').join('')+
-      '</div>';
-    }
-  });
-  if(!huboBalance){
-    balanceHtml='<div class="card"><div style="font-size:12px;color:var(--text3)">'+
-      ((v.companeros||[]).length?'Todavía no cargaste gastos con "pagado por" — al agregarlos vas a ver acá cuánto aportó cada uno y quién le debe a quién.':'Agregá compañeros de viaje (✏️ Editar destino / fechas / compañeros) para poder repartir los gastos entre todos.')+
-    '</div></div>';
-  }
-  document.getElementById('vd-balance').innerHTML=balanceHtml;
-  document.getElementById('vd-btn-enviar-reporte').style.display=huboBalance?'':'none';
-
   const items=[...(v.items||[])];
   document.getElementById('vd-items').innerHTML=items.length?items.map(it=>
     '<div class="row-item" onclick="abrirModalViajeItem(\''+id+'\',\''+it.id+'\')">'+
       '<div class="row-icon" style="background:rgba(91,107,245,.15)">'+rubroLabel(it.rubro).split(' ')[0]+'</div>'+
-      '<div class="row-main"><div class="row-title">'+rubroLabel(it.rubro).split(' ').slice(1).join(' ')+(it.nota?' · '+esc(it.nota):'')+'</div>'+
-      '<div class="row-sub">'+(it.pagadoPor?'Pagó '+esc(it.pagadoPor):'')+'</div></div>'+
+      '<div class="row-main"><div class="row-title">'+rubroLabel(it.rubro).split(' ').slice(1).join(' ')+(it.nota?' · '+esc(it.nota):'')+'</div></div>'+
       '<div class="row-amt"><div class="row-amt-val">'+fmtMoney(it.monto,it.moneda)+'</div></div>'+
     '</div>'
   ).join(''):'<div style="text-align:center;color:var(--text3);font-size:12px;padding:16px 0">Sin gastos cargados todavía</div>';
@@ -3301,7 +3674,7 @@ function _renderViajeDetalleContenido(id){
   return true;
 }
 
-let _rubroViajeItem='otro', _monedaViajeItem='ARS', _participantesViajeItem=[];
+let _rubroViajeItem='otro', _monedaViajeItem='ARS';
 function abrirModalViajeItem(viajeId,itemId){
   const v=DB.viajes.find(x=>x.id===viajeId);
   if(!v) return;
@@ -3315,18 +3688,6 @@ function abrirModalViajeItem(viajeId,itemId){
   setMonedaViajeItem(_monedaViajeItem);
   _rubroViajeItem=it?it.rubro:'otro';
   renderRubroPills();
-
-  const wrap=document.getElementById('vi-reparto-wrap');
-  if((v.companeros||[]).length){
-    wrap.style.display='block';
-    const sel=document.getElementById('vi-pagador');
-    sel.innerHTML='<option value="">— Elegí —</option>'+v.companeros.map(c=>'<option value="'+esc(c)+'" '+(it&&it.pagadoPor===c?'selected':'')+'>'+esc(c)+'</option>').join('');
-    _participantesViajeItem=it?[...(it.participantes||[])]:[...v.companeros];
-    renderParticipantesViajeItemPills(v.companeros);
-  } else {
-    wrap.style.display='none';
-    _participantesViajeItem=[];
-  }
   cambiarModal('viaje-detalle','viaje-item');
 }
 function renderRubroPills(){
@@ -3335,18 +3696,6 @@ function renderRubroPills(){
   ).join('');
 }
 function setMonedaViajeItem(m){ _monedaViajeItem=m; document.getElementById('vi-moneda').value=m; }
-function renderParticipantesViajeItemPills(companeros){
-  document.getElementById('vi-participantes-pills').innerHTML=companeros.map(c=>{
-    const sel=_participantesViajeItem.includes(c);
-    return '<button type="button" class="pill '+(sel?'sel':'')+'" onclick="toggleParticipanteViajeItem(\''+esc(c)+'\')">'+esc(c)+'</button>';
-  }).join('');
-}
-function toggleParticipanteViajeItem(nombre){
-  if(_participantesViajeItem.includes(nombre)) _participantesViajeItem=_participantesViajeItem.filter(x=>x!==nombre);
-  else _participantesViajeItem.push(nombre);
-  const v=DB.viajes.find(x=>x.id===document.getElementById('vi-viaje-id').value);
-  renderParticipantesViajeItemPills(v.companeros||[]);
-}
 async function guardarViajeItem(){
   const viajeId=document.getElementById('vi-viaje-id').value;
   const v=DB.viajes.find(x=>x.id===viajeId);
@@ -3354,14 +3703,10 @@ async function guardarViajeItem(){
   const monto=parseFloat(document.getElementById('vi-monto').value)||0;
   if(monto<=0){ toast('⚠️ Ingresá el monto'); return; }
   const itemId=document.getElementById('vi-viaje-id').dataset.itemId;
-  const pagador=document.getElementById('vi-pagador').value||null;
   const data={
     id:itemId||uid(), rubro:_rubroViajeItem, nota:document.getElementById('vi-nota').value.trim(),
     moneda:_monedaViajeItem, monto,
-    pagadoPor:pagador||undefined,
-    participantes:pagador?[..._participantesViajeItem]:[],
   };
-  if(!data.pagadoPor) delete data.pagadoPor;
   if(!v.items) v.items=[];
   if(itemId){ const idx=v.items.findIndex(i=>i.id===itemId); if(idx>=0) v.items[idx]=data; }
   else v.items.push(data);
@@ -3385,73 +3730,6 @@ function volverAViajeDetalle(){
   const viajeId=document.getElementById('vi-viaje-id').value;
   _renderViajeDetalleContenido(viajeId);
   cambiarModal('viaje-item','viaje-detalle');
-}
-
-// ── Pagos / aportes al reparto de gastos del viaje ──
-const MEDIOS_PAGO_VIAJE=[{id:'transferencia',label:'🏦 Transferencia'},{id:'efectivo',label:'💵 Efectivo'}];
-let _medioPagoViaje='transferencia', _monedaPagoViaje='ARS';
-function renderMedioPagoPills(){
-  document.getElementById('vp-medio-pills').innerHTML=MEDIOS_PAGO_VIAJE.map(m=>
-    '<button type="button" class="pill '+(m.id===_medioPagoViaje?'sel':'')+'" onclick="_medioPagoViaje=\''+m.id+'\';renderMedioPagoPills()">'+m.label+'</button>'
-  ).join('');
-}
-function setMonedaPagoViaje(m){ _monedaPagoViaje=m; document.getElementById('vp-moneda').value=m; }
-function abrirModalPagoViaje(viajeId,companeroPre,monedaPre,pagoId){
-  const v=DB.viajes.find(x=>x.id===viajeId);
-  if(!v) return;
-  document.getElementById('vp-viaje-id').value=viajeId;
-  document.getElementById('vp-pago-id').value=pagoId||'';
-  const p=pagoId?(v.pagos||[]).find(x=>x.id===pagoId):null;
-  const sel=document.getElementById('vp-companero');
-  sel.innerHTML=(v.companeros||[]).map(c=>'<option value="'+esc(c)+'">'+esc(c)+'</option>').join('');
-  sel.value=p?p.companero:(companeroPre||'');
-  _medioPagoViaje=p?p.medio:'transferencia';
-  renderMedioPagoPills();
-  _monedaPagoViaje=p?p.moneda:(monedaPre||'ARS');
-  setMonedaPagoViaje(_monedaPagoViaje);
-  document.getElementById('vp-monto').value=p?p.monto:'';
-  document.getElementById('vp-fecha').value=p?p.fecha:fechaHoy();
-  document.getElementById('vp-nota').value=p?(p.nota||''):'';
-  document.getElementById('btn-borrar-pago-viaje').style.display=p?'':'none';
-  cambiarModal('viaje-detalle','viaje-pago');
-}
-async function guardarPagoViaje(){
-  const viajeId=document.getElementById('vp-viaje-id').value;
-  const v=DB.viajes.find(x=>x.id===viajeId);
-  if(!v) return;
-  const monto=parseFloat(document.getElementById('vp-monto').value)||0;
-  if(monto<=0){ toast('⚠️ Ingresá el monto'); return; }
-  const companero=document.getElementById('vp-companero').value;
-  if(!companero){ toast('⚠️ Elegí quién pagó'); return; }
-  const pagoId=document.getElementById('vp-pago-id').value;
-  const data={
-    id:pagoId||uid(), companero, medio:_medioPagoViaje, moneda:_monedaPagoViaje, monto,
-    fecha:document.getElementById('vp-fecha').value||fechaHoy(),
-    nota:document.getElementById('vp-nota').value.trim(),
-  };
-  if(!v.pagos) v.pagos=[];
-  if(pagoId){ const idx=v.pagos.findIndex(p=>p.id===pagoId); if(idx>=0) v.pagos[idx]=data; }
-  else v.pagos.push(data);
-  await save(); renderViajes();
-  _renderViajeDetalleContenido(viajeId);
-  cambiarModal('viaje-pago','viaje-detalle');
-  toast('✅ Pago registrado');
-}
-async function borrarPagoViaje(){
-  const viajeId=document.getElementById('vp-viaje-id').value;
-  const pagoId=document.getElementById('vp-pago-id').value;
-  const v=DB.viajes.find(x=>x.id===viajeId);
-  if(!v||!pagoId||!confirm('¿Borrar este pago?')) return;
-  v.pagos=(v.pagos||[]).filter(p=>p.id!==pagoId);
-  await save(); renderViajes();
-  _renderViajeDetalleContenido(viajeId);
-  cambiarModal('viaje-pago','viaje-detalle');
-  toast('🗑 Pago eliminado');
-}
-function volverAViajeDetalleDesdePago(){
-  const viajeId=document.getElementById('vp-viaje-id').value;
-  _renderViajeDetalleContenido(viajeId);
-  cambiarModal('viaje-pago','viaje-detalle');
 }
 
 // ── Meta de ahorro del viaje ──
@@ -3966,6 +4244,9 @@ function renderMas(){
 
   const comp=(DB.compromisos||[]).filter(c=>!c.pagado);
   document.getElementById('mas-comp-sub').textContent=comp.length?(comp.length+' pendientes'):'Sin compromisos pendientes';
+
+  const gg=DB.gastosGrupales||[];
+  document.getElementById('mas-gg-sub').textContent=gg.length?(gg.length+' evento'+(gg.length!==1?'s':'')+' cargados'):'Cenas, asados y salidas repartidas entre todos';
 
   const tc=DB.perfil.tipoCambio;
   document.getElementById('mas-tc-sub').textContent='1 USD = '+(tc?fmtMoney(tc,'ARS'):'—')+' ARS';
