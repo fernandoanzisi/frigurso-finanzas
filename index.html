@@ -723,12 +723,10 @@
     <input type="hidden" id="gpg-grupo-id">
     <input type="hidden" id="gpg-pago-id">
     <div class="field-wrap"><div class="field-label">Participante</div><select class="input" id="gpg-participante"></select></div>
-    <div class="field-wrap">
-      <div class="field-label">Medio de pago</div>
-      <div class="pill-sel" id="gpg-medio-pills"></div>
-    </div>
     <div class="field-wrap"><div class="field-label">Moneda</div><select class="input moneda-select" id="gpg-moneda" onchange="setMonedaPagoGrupo(this.value)"></select></div>
-    <div class="field-wrap"><div class="field-label">Monto</div><input type="number" class="input" id="gpg-monto" placeholder="0" step="0.01"></div>
+    <div class="field-wrap"><div class="field-label">💵 Efectivo</div><input type="number" class="input" id="gpg-monto-efectivo" placeholder="0" step="0.01"></div>
+    <div class="field-wrap"><div class="field-label">🏦 Transferencia</div><input type="number" class="input" id="gpg-monto-transferencia" placeholder="0" step="0.01"></div>
+    <div style="font-size:11px;color:var(--text3);margin:-6px 0 10px">Completá uno de los dos, o los dos si pagó parte en efectivo y parte por transferencia.</div>
     <div class="field-wrap"><div class="field-label">Fecha</div><input type="date" class="input" id="gpg-fecha"></div>
     <div class="field-wrap"><div class="field-label">Nota (opcional)</div><input type="text" class="input" id="gpg-nota" placeholder="Ej: A Carlos"></div>
     <button class="btn-primary" onclick="guardarPagoGrupo()">Guardar pago</button>
@@ -3555,13 +3553,7 @@ async function guardarCargaRapidaGrupo(){
 }
 
 // ── Pagos / aportes al reparto de gastos del evento ──
-const MEDIOS_PAGO_GRUPO=[{id:'transferencia',label:'🏦 Transferencia'},{id:'efectivo',label:'💵 Efectivo'}];
-let _medioPagoGrupo='transferencia', _monedaPagoGrupo='ARS';
-function renderMedioPagoGrupoPills(){
-  document.getElementById('gpg-medio-pills').innerHTML=MEDIOS_PAGO_GRUPO.map(m=>
-    '<button type="button" class="pill '+(m.id===_medioPagoGrupo?'sel':'')+'" onclick="_medioPagoGrupo=\''+m.id+'\';renderMedioPagoGrupoPills()">'+m.label+'</button>'
-  ).join('');
-}
+let _monedaPagoGrupo='ARS';
 function setMonedaPagoGrupo(m){ _monedaPagoGrupo=m; document.getElementById('gpg-moneda').value=m; }
 function abrirModalPagoGrupo(grupoId,participantePreId,monedaPre,pagoId){
   const g=DB.gastosGrupales.find(x=>x.id===grupoId);
@@ -3572,11 +3564,10 @@ function abrirModalPagoGrupo(grupoId,participantePreId,monedaPre,pagoId){
   const sel=document.getElementById('gpg-participante');
   sel.innerHTML=(g.participantes||[]).map(part=>'<option value="'+part.id+'">'+esc(part.nombre)+'</option>').join('');
   sel.value=p?p.participanteId:(participantePreId||'');
-  _medioPagoGrupo=p?p.medio:'transferencia';
-  renderMedioPagoGrupoPills();
   _monedaPagoGrupo=p?p.moneda:(monedaPre||'ARS');
   setMonedaPagoGrupo(_monedaPagoGrupo);
-  document.getElementById('gpg-monto').value=p?p.monto:'';
+  document.getElementById('gpg-monto-efectivo').value=p&&p.medio==='efectivo'?p.monto:'';
+  document.getElementById('gpg-monto-transferencia').value=p&&p.medio==='transferencia'?p.monto:'';
   document.getElementById('gpg-fecha').value=p?p.fecha:fechaHoy();
   document.getElementById('gpg-nota').value=p?(p.nota||''):'';
   document.getElementById('btn-borrar-pago-grupo').style.display=p?'':'none';
@@ -3586,23 +3577,31 @@ async function guardarPagoGrupo(){
   const grupoId=document.getElementById('gpg-grupo-id').value;
   const g=DB.gastosGrupales.find(x=>x.id===grupoId);
   if(!g) return;
-  const monto=parseFloat(document.getElementById('gpg-monto').value)||0;
-  if(monto<=0){ toast('⚠️ Ingresá el monto'); return; }
   const participanteId=document.getElementById('gpg-participante').value;
   if(!participanteId){ toast('⚠️ Elegí quién pagó'); return; }
+  const montoEfectivo=parseFloat(document.getElementById('gpg-monto-efectivo').value)||0;
+  const montoTransferencia=parseFloat(document.getElementById('gpg-monto-transferencia').value)||0;
+  if(montoEfectivo<=0&&montoTransferencia<=0){ toast('⚠️ Ingresá al menos un monto'); return; }
+  const fecha=document.getElementById('gpg-fecha').value||fechaHoy();
+  const nota=document.getElementById('gpg-nota').value.trim();
   const pagoId=document.getElementById('gpg-pago-id').value;
-  const data={
-    id:pagoId||uid(), participanteId, medio:_medioPagoGrupo, moneda:_monedaPagoGrupo, monto,
-    fecha:document.getElementById('gpg-fecha').value||fechaHoy(),
-    nota:document.getElementById('gpg-nota').value.trim(),
-  };
+  const partes=[];
+  if(montoEfectivo>0) partes.push({medio:'efectivo',monto:montoEfectivo});
+  if(montoTransferencia>0) partes.push({medio:'transferencia',monto:montoTransferencia});
   if(!g.pagos) g.pagos=[];
-  if(pagoId){ const idx=g.pagos.findIndex(x=>x.id===pagoId); if(idx>=0) g.pagos[idx]=data; }
-  else g.pagos.push(data);
+  if(pagoId){
+    const idx=g.pagos.findIndex(x=>x.id===pagoId);
+    if(idx>=0){
+      g.pagos[idx]={id:pagoId, participanteId, medio:partes[0].medio, moneda:_monedaPagoGrupo, monto:partes[0].monto, fecha, nota};
+      for(let i=1;i<partes.length;i++) g.pagos.push({id:uid(), participanteId, medio:partes[i].medio, moneda:_monedaPagoGrupo, monto:partes[i].monto, fecha, nota});
+    }
+  } else {
+    partes.forEach(pt=>g.pagos.push({id:uid(), participanteId, medio:pt.medio, moneda:_monedaPagoGrupo, monto:pt.monto, fecha, nota}));
+  }
   await save(); renderGastosGrupales();
   _renderGrupoDetalleContenido(grupoId);
   cambiarModal('grupo-pago','grupo-detalle');
-  toast('✅ Pago registrado');
+  toast(partes.length>1?'✅ Pagos registrados':'✅ Pago registrado');
 }
 async function borrarPagoGrupo(){
   const grupoId=document.getElementById('gpg-grupo-id').value;
